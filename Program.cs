@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Windows.Forms;
 using WebKit;
 
@@ -11,6 +12,19 @@ static class Program
     {
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
+
+        var asmPath = Path.Combine(AppContext.BaseDirectory, "WebKitBrowser.dll");
+        if (!File.Exists(asmPath))
+        {
+            MessageBox.Show(
+                "WebKitBrowser.dll not found. Ensure the WebKitBrowser_ZC package is restored " +
+                "and its files are copied next to the executable.",
+                "Missing WebKit dependency",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+            return;
+        }
+
         Application.Run(new BrowserForm());
     }
 }
