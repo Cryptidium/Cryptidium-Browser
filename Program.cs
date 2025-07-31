@@ -36,11 +36,11 @@ class BrowserForm : Form
 
     public BrowserForm()
     {
-        Text = "Cryptidium WebKit Browser";
+        Text = "Cryptidium";
         Width = 800;
         Height = 600;
 
-        _address = new TextBox { Text = "https://example.com", Width = 600 };
+        _address = new TextBox { Text = "https://google.com", Width = 600 };
         _address.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) Navigate(); };
         var button = new Button { Text = "Go" };
         button.Click += (s, e) => Navigate();
