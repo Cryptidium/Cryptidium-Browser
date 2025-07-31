@@ -1,0 +1,24 @@
+{
+  "version": 2,
+  "dgSpecHash": "RYOKh4gd4Qc=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Cryptid\\Documents\\GitHub\\Cryptidium\\Cryptidium.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Cryptid\\.nuget\\packages\\webkitbrowser_zc\\1.0.0\\webkitbrowser_zc.1.0.0.nupkg.sha512",
+    "C:\\Users\\Cryptid\\.nuget\\packages\\microsoft.windows.sdk.net.ref\\10.0.22000.57\\microsoft.windows.sdk.net.ref.10.0.22000.57.nupkg.sha512"
+  ],
+  "logs": [
+    {
+      "code": "NU1701",
+      "level": "Warning",
+      "message": "Package 'WebKitBrowser_ZC 1.0.0' was restored using '.NETFramework,Version=v4.6.1, .NETFramework,Version=v4.6.2, .NETFramework,Version=v4.7, .NETFramework,Version=v4.7.1, .NETFramework,Version=v4.7.2, .NETFramework,Version=v4.8, .NETFramework,Version=v4.8.1' instead of the project target framework 'net8.0-windows10.0.22000'. This package may not be fully compatible with your project.",
+      "projectPath": "C:\\Users\\Cryptid\\Documents\\GitHub\\Cryptidium\\Cryptidium.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\Users\\Cryptid\\Documents\\GitHub\\Cryptidium\\Cryptidium.csproj",
+      "libraryId": "WebKitBrowser_ZC",
+      "targetGraphs": [
+        "net8.0-windows10.0.22000"
+      ]
+    }
+  ]
+}

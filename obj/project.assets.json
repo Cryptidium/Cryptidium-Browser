@@ -1,0 +1,175 @@
+{
+  "version": 3,
+  "targets": {
+    "net8.0-windows10.0.22000": {
+      "WebKitBrowser_ZC/1.0.0": {
+        "type": "package",
+        "compile": {
+          "lib/_._": {}
+        },
+        "runtime": {
+          "lib/WebKitBrowser.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "WebKitBrowser_ZC/1.0.0": {
+      "sha512": "A6LrZOkAQuR9CnktAOy+fuZWQPtWdAYketQw2+bNm/KYTsC/p0M8pbo1yqsRJ8afQusUehgYLQxhzwvBueQ4oA==",
+      "type": "package",
+      "path": "webkitbrowser_zc/1.0.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "build/net40/CFLite.dll",
+        "build/net40/JavaScriptCore.dll",
+        "build/net40/SQLite3.dll",
+        "build/net40/WebKit.Interop.dll",
+        "build/net40/WebKit.dll",
+        "build/net40/WebKitBrowser.dll",
+        "build/net40/WebKitBrowser.dll.manifest",
+        "build/net40/WebKitBrowserTest.exe",
+        "build/net40/icudt40.dll",
+        "build/net40/icuin40.dll",
+        "build/net40/icuuc40.dll",
+        "build/net40/libcurl.dll",
+        "build/net40/libeay32.dll",
+        "build/net40/libexslt.dll",
+        "build/net40/libxml2.dll",
+        "build/net40/libxslt.dll",
+        "build/net40/objc.dll",
+        "build/net40/pthreadVC2.dll",
+        "build/net40/ssleay32.dll",
+        "build/net45/CFLite.dll",
+        "build/net45/JavaScriptCore.dll",
+        "build/net45/SQLite3.dll",
+        "build/net45/WebKit.Interop.dll",
+        "build/net45/WebKit.dll",
+        "build/net45/WebKitBrowser.dll",
+        "build/net45/WebKitBrowser.dll.manifest",
+        "build/net45/WebKitBrowserTest.exe",
+        "build/net45/icudt40.dll",
+        "build/net45/icuin40.dll",
+        "build/net45/icuuc40.dll",
+        "build/net45/libcurl.dll",
+        "build/net45/libeay32.dll",
+        "build/net45/libexslt.dll",
+        "build/net45/libxml2.dll",
+        "build/net45/libxslt.dll",
+        "build/net45/objc.dll",
+        "build/net45/pthreadVC2.dll",
+        "build/net45/ssleay32.dll",
+        "lib/WebKitBrowser.dll",
+        "webkitbrowser_zc.1.0.0.nupkg.sha512",
+        "webkitbrowser_zc.nuspec"
+      ]
+    }
+  },
+  "projectFileDependencyGroups": {
+    "net8.0-windows10.0.22000": [
+      "WebKitBrowser_ZC >= 1.0.0"
+    ]
+  },
+  "packageFolders": {
+    "C:\\Users\\Cryptid\\.nuget\\packages\\": {},
+    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
+  },
+  "project": {
+    "version": "1.0.0",
+    "restore": {
+      "projectUniqueName": "C:\\Users\\Cryptid\\Documents\\GitHub\\Cryptidium\\Cryptidium.csproj",
+      "projectName": "Cryptidium",
+      "projectPath": "C:\\Users\\Cryptid\\Documents\\GitHub\\Cryptidium\\Cryptidium.csproj",
+      "packagesPath": "C:\\Users\\Cryptid\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\Cryptid\\Documents\\GitHub\\Cryptidium\\obj\\",
+      "projectStyle": "PackageReference",
+      "fallbackFolders": [
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+      ],
+      "configFilePaths": [
+        "C:\\Users\\Cryptid\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+      ],
+      "originalTargetFrameworks": [
+        "net8.0-windows10.0.22000.0"
+      ],
+      "sources": {
+        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+        "C:\\Program Files\\dotnet\\library-packs": {},
+        "https://api.nuget.org/v3/index.json": {}
+      },
+      "frameworks": {
+        "net8.0-windows10.0.22000": {
+          "targetAlias": "net8.0-windows10.0.22000.0",
+          "projectReferences": {}
+        }
+      },
+      "warningProperties": {
+        "warnAsError": [
+          "NU1605"
+        ]
+      },
+      "restoreAuditProperties": {
+        "enableAudit": "true",
+        "auditLevel": "low",
+        "auditMode": "direct"
+      },
+      "SdkAnalysisLevel": "9.0.300"
+    },
+    "frameworks": {
+      "net8.0-windows10.0.22000": {
+        "targetAlias": "net8.0-windows10.0.22000.0",
+        "dependencies": {
+          "WebKitBrowser_ZC": {
+            "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+            "suppressParent": "All",
+            "target": "Package",
+            "version": "[1.0.0, )"
+          }
+        },
+        "imports": [
+          "net461",
+          "net462",
+          "net47",
+          "net471",
+          "net472",
+          "net48",
+          "net481"
+        ],
+        "assetTargetFallback": true,
+        "warn": true,
+        "downloadDependencies": [
+          {
+            "name": "Microsoft.Windows.SDK.NET.Ref",
+            "version": "[10.0.22000.57, 10.0.22000.57]"
+          }
+        ],
+        "frameworkReferences": {
+          "Microsoft.NETCore.App": {
+            "privateAssets": "all"
+          },
+          "Microsoft.Windows.SDK.NET.Ref.Windows": {
+            "privateAssets": "all"
+          },
+          "Microsoft.WindowsDesktop.App.WindowsForms": {
+            "privateAssets": "none"
+          }
+        },
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.300/PortableRuntimeIdentifierGraph.json"
+      }
+    }
+  },
+  "logs": [
+    {
+      "code": "NU1701",
+      "level": "Warning",
+      "warningLevel": 1,
+      "message": "Package 'WebKitBrowser_ZC 1.0.0' was restored using '.NETFramework,Version=v4.6.1, .NETFramework,Version=v4.6.2, .NETFramework,Version=v4.7, .NETFramework,Version=v4.7.1, .NETFramework,Version=v4.7.2, .NETFramework,Version=v4.8, .NETFramework,Version=v4.8.1' instead of the project target framework 'net8.0-windows10.0.22000'. This package may not be fully compatible with your project.",
+      "libraryId": "WebKitBrowser_ZC",
+      "targetGraphs": [
+        "net8.0-windows10.0.22000"
+      ]
+    }
+  ]
+}
