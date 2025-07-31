@@ -1,6 +1,6 @@
 using System;
 using System.Windows.Forms;
-using Microsoft.Web.WebView2.WinForms;
+using WebKit;
 
 namespace Cryptidium.Browser;
 
@@ -18,11 +18,11 @@ static class Program
 class BrowserForm : Form
 {
     private readonly TextBox _address;
-    private readonly WebView2 _view;
+    private readonly WebKitBrowser _view;
 
     public BrowserForm()
     {
-        Text = "Cryptidium Browser";
+        Text = "Cryptidium WebKit Browser";
         Width = 800;
         Height = 600;
 
@@ -34,16 +34,12 @@ class BrowserForm : Form
         bar.Controls.Add(_address);
         bar.Controls.Add(button);
 
-        _view = new WebView2 { Dock = DockStyle.Fill };
+        _view = new WebKitBrowser { Dock = DockStyle.Fill };
 
         Controls.Add(_view);
         Controls.Add(bar);
 
-        Load += async (_, __) =>
-        {
-            await _view.EnsureCoreWebView2Async();
-            _view.Source = new Uri(_address.Text);
-        };
+        Load += (_, __) => _view.Navigate(_address.Text);
     }
 
     private void Navigate()
@@ -54,6 +50,6 @@ class BrowserForm : Form
             url = "https://" + url;
             _address.Text = url;
         }
-        _view.Source = new Uri(url);
+        _view.Navigate(url);
     }
 }
