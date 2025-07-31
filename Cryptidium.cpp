@@ -1,22 +1,66 @@
-#include <gtk/gtk.h>
-#include <webkit2/webkit2.h>
+#include <windows.h>
+#include <cstdlib>
+#include <WebKit/WebKit.h>
 
-int main(int argc, char* argv[]) {
-    gtk_init(&argc, &argv);
+static WKViewRef gView;
 
-    GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_title(GTK_WINDOW(window), "Cryptidium");
-    gtk_window_set_default_size(GTK_WINDOW(window), 800, 600);
+LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg) {
+    case WM_CREATE: {
+        RECT rc; GetClientRect(hWnd, &rc);
+        WKPageConfigurationRef cfg = WKPageConfigurationCreate();
+        WKContextRef ctx = WKContextCreateWithConfiguration(nullptr);
+        WKPageConfigurationSetContext(cfg, ctx);
+        gView = WKViewCreate(hWnd, &rc, cfg);
 
-    GtkWidget *webview = webkit_web_view_new();
-    gtk_container_add(GTK_CONTAINER(window), webview);
+        int argc; LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+        const char* def = "https://google.com";
+        const char* url;
+        if (argc > 1) {
+            char buf[2048];
+            WideCharToMultiByte(CP_UTF8, 0, argv[1], -1, buf, sizeof(buf), nullptr, nullptr);
+            url = _strdup(buf);
+        }
+        else {
+            url = def;
+        }
+        WKURLRef wkurl = WKURLCreateWithUTF8CString(url);
+        WKPageLoadURL(WKViewGetPage(gView), wkurl);
+        return 0;
+    }
+    case WM_SIZE: {
+        if (gView) {
+            RECT rc; GetClientRect(hWnd, &rc);
+            WKViewSetFrame(gView, &rc);
+        }
+        return 0;
+    }
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        return 0;
+    }
+    return DefWindowProc(hWnd, msg, wParam, lParam);
+}
 
-    g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
+int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, PWSTR, int nCmdShow)
+{
+    const wchar_t cls[] = L"Cryptidium";
+    WNDCLASSEXW wc{ sizeof(wc) };
+    wc.lpfnWndProc = WndProc;
+    wc.hInstance = hInst;
+    wc.lpszClassName = cls;
+    RegisterClassExW(&wc);
 
-    const char *url = (argc > 1) ? argv[1] : "https://example.com";
-    webkit_web_view_load_uri(WEBKIT_WEB_VIEW(webview), url);
+    HWND win = CreateWindowW(cls, L"Cryptidium", WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, CW_USEDEFAULT, 800, 600,
+        nullptr, nullptr, hInst, nullptr);
+    ShowWindow(win, nCmdShow);
 
-    gtk_widget_show_all(window);
-    gtk_main();
+    MSG m;
+    while (GetMessageW(&m, nullptr, 0, 0)) {
+        TranslateMessage(&m);
+        DispatchMessageW(&m);
+    }
     return 0;
 }
