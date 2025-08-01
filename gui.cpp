@@ -48,6 +48,10 @@ static void EnsureLoaderClient();
 static void UpdateFavicon(int index);
 static int FindTabByPage(WKPageRef page);
 static void DidReceiveTitleForFrame(WKPageRef page, WKStringRef title, WKFrameRef frame, WKTypeRef, const void* clientInfo);
+static void DidStartProvisionalLoadForFrame(WKPageRef, WKFrameRef, WKTypeRef, const void*);
+static void DidCommitLoadForFrame(WKPageRef, WKFrameRef, WKTypeRef, const void*);
+static void DidFinishLoadForFrame(WKPageRef, WKFrameRef, WKTypeRef, const void*);
+static void DidFailLoadWithErrorForFrame(WKPageRef, WKFrameRef, WKErrorRef, WKTypeRef, const void*);
 static void CloseTab(HWND hWnd, int index);
 static void ResizeChildren(HWND hWnd);
 static void ShowCurrentTab();
@@ -58,6 +62,11 @@ static void EnsureLoaderClient()
         return;
     memset(&gLoaderClient, 0, sizeof(gLoaderClient));
     gLoaderClient.base.version = 0;
+    gLoaderClient.base.clientInfo = nullptr;
+    gLoaderClient.didStartProvisionalLoadForFrame = DidStartProvisionalLoadForFrame;
+    gLoaderClient.didCommitLoadForFrame = DidCommitLoadForFrame;
+    gLoaderClient.didFinishLoadForFrame = DidFinishLoadForFrame;
+    gLoaderClient.didFailLoadWithErrorForFrame = DidFailLoadWithErrorForFrame;
     gLoaderClient.didReceiveTitleForFrame = DidReceiveTitleForFrame;
     gLoaderClientInit = true;
 }
@@ -112,6 +121,22 @@ static void DidReceiveTitleForFrame(WKPageRef page, WKStringRef title, WKFrameRe
     TabCtrl_SetItem(gTabCtrl, index, &tie);
 
     UpdateFavicon(index);
+}
+
+static void DidStartProvisionalLoadForFrame(WKPageRef, WKFrameRef, WKTypeRef, const void*)
+{
+}
+
+static void DidCommitLoadForFrame(WKPageRef, WKFrameRef, WKTypeRef, const void*)
+{
+}
+
+static void DidFinishLoadForFrame(WKPageRef, WKFrameRef, WKTypeRef, const void*)
+{
+}
+
+static void DidFailLoadWithErrorForFrame(WKPageRef, WKFrameRef, WKErrorRef, WKTypeRef, const void*)
+{
 }
 
 static void CloseTab(HWND hWnd, int index)
