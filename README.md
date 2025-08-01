@@ -1,5 +1,5 @@
 # Cryptidium
-The first WebKit based web browser for Windows since 2012
+A modern WebKit based web browser for Windows 11
 # Building from Source
 1. Download the Source Code
 2. Unzip the files
