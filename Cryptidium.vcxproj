@@ -76,6 +76,7 @@
     <ClCompile Include="gui.cpp" />
     <ClInclude Include="buildinfo.h" />
     <ClInclude Include="gui.h" />
+    <ClInclude Include="index.html" />
     <None Include="assets\app.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
@@ -84,7 +85,7 @@
     <ItemGroup>
       <WebKitBinFiles Include="$(ProjectDir)\WebKit\bin\*.dll" />
       <WebKitSupportFiles Include="$(ProjectDir)\WebKit\lib\*.*" Exclude="$(ProjectDir)\WebKit\lib\MiniBrowser.*" />
-      <AssetFiles Include="$(ProjectDir)\assets\**\*.*" />
+      <AssetFiles Include="$(ProjectDir)\assets\*.*" />
     </ItemGroup>
     <Copy SourceFiles="@(WebKitBinFiles)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(AssetFiles)" DestinationFolder="$(OutDir)\Assets\" SkipUnchangedFiles="true" />
