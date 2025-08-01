@@ -6,6 +6,10 @@
 #include <WebKit/WebKit2_C.h>
 #include "buildinfo.h"
 
+#ifndef EN_RETURN
+#define EN_RETURN 0x2000
+#endif
+
 #pragma comment(lib, "Comctl32.lib")
 
 struct Tab {
@@ -99,7 +103,7 @@ static LRESULT CALLBACK UrlBarProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
 {
     if (msg == WM_KEYDOWN && wParam == VK_RETURN) {
         HWND parent = GetParent(hwnd);
-        SendMessage(parent, WM_COMMAND, MAKEWPARAM(1004, EN_RETURN), (LPARAM)hwnd);
+        SendMessageW(parent, WM_COMMAND, MAKEWPARAM(1004, EN_RETURN), (LPARAM)hwnd);
         return 0;
     }
     return DefSubclassProc(hwnd, msg, wParam, lParam);
@@ -194,7 +198,7 @@ int RunBrowser(HINSTANCE hInst, int nCmdShow)
     RegisterClassExW(&wc);
 
     wchar_t title[128];
-    swprintf(title, 128, L"Cryptidium %ls", BuildInfo::kVersionFormatted);
+    swprintf(title, 128, L"Cryptidium");
     HWND win = CreateWindowW(cls, title, WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT, 800, 600,
         nullptr, nullptr, hInst, nullptr);

@@ -55,25 +55,3 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     }
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
-
-int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, PWSTR, int nCmdShow)
-{
-    const wchar_t cls[] = L"Cryptidium";
-    WNDCLASSEXW wc{ sizeof(wc) };
-    wc.lpfnWndProc = WndProc;
-    wc.hInstance = hInst;
-    wc.lpszClassName = cls;
-    RegisterClassExW(&wc);
-
-    HWND win = CreateWindowW(cls, L"Cryptidium", WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT, 800, 600,
-        nullptr, nullptr, hInst, nullptr);
-    ShowWindow(win, nCmdShow);
-
-    MSG m;
-    while (GetMessageW(&m, nullptr, 0, 0)) {
-        TranslateMessage(&m);
-        DispatchMessageW(&m);
-    }
-    return 0;
-}
