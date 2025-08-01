@@ -4,13 +4,18 @@
 #include <vector>
 #include <cstdlib>
 #include <WebKit/WebKit2_C.h>
+#include <uxtheme.h>
 #include "buildinfo.h"
 
 #ifndef EN_RETURN
 #define EN_RETURN 0x2000
 #endif
+#ifndef BST_HOT
+#define BST_HOT 0x0200
+#endif
 
 #pragma comment(lib, "Comctl32.lib")
+#pragma comment(lib, "UxTheme.lib")
 
 struct Tab {
     WKViewRef view;
@@ -26,6 +31,10 @@ static HWND gForwardBtn;
 static HWND gRefreshBtn;
 static HWND gSettingsBtn;
 static HWND gNewTabBtn;
+
+static HBRUSH gBgBrush;
+static HBRUSH gHoverBrush;
+static HFONT gFont;
 
 static const int TAB_HEIGHT = 24;
 static const int NAV_HEIGHT = 28;
@@ -115,22 +124,38 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
     case WM_CREATE: {
         InitCommonControls();
 
+        gBgBrush = CreateSolidBrush(RGB(240, 240, 240));
+        gHoverBrush = CreateSolidBrush(RGB(220, 220, 220));
+        gFont = CreateFontW(-16, 0, 0, 0, FW_NORMAL, 0, 0, 0, DEFAULT_CHARSET,
+            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
+            DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
+
         gTabCtrl = CreateWindowExW(0, WC_TABCONTROLW, L"", WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE,
             0, 0, 0, 0, hWnd, (HMENU)1007, nullptr, nullptr);
-        gNewTabBtn = CreateWindowW(L"BUTTON", L"+", WS_CHILD | WS_VISIBLE,
+        SetWindowTheme(gTabCtrl, L"", L"");
+
+        gNewTabBtn = CreateWindowW(L"BUTTON", L"+", WS_CHILD | WS_VISIBLE | BS_FLAT,
             0, 0, 0, 0, hWnd, (HMENU)1006, nullptr, nullptr);
-        gBackBtn = CreateWindowW(L"BUTTON", L"<", WS_CHILD | WS_VISIBLE,
+        gBackBtn = CreateWindowW(L"BUTTON", L"<", WS_CHILD | WS_VISIBLE | BS_FLAT,
             0, 0, 0, 0, hWnd, (HMENU)1001, nullptr, nullptr);
-        gForwardBtn = CreateWindowW(L"BUTTON", L">", WS_CHILD | WS_VISIBLE,
+        gForwardBtn = CreateWindowW(L"BUTTON", L">", WS_CHILD | WS_VISIBLE | BS_FLAT,
             0, 0, 0, 0, hWnd, (HMENU)1002, nullptr, nullptr);
-        gRefreshBtn = CreateWindowW(L"BUTTON", L"R", WS_CHILD | WS_VISIBLE,
+        gRefreshBtn = CreateWindowW(L"BUTTON", L"R", WS_CHILD | WS_VISIBLE | BS_FLAT,
             0, 0, 0, 0, hWnd, (HMENU)1003, nullptr, nullptr);
-        gSettingsBtn = CreateWindowW(L"BUTTON", L"⚙", WS_CHILD | WS_VISIBLE,
+        gSettingsBtn = CreateWindowW(L"BUTTON", L"⚙", WS_CHILD | WS_VISIBLE | BS_FLAT,
             0, 0, 0, 0, hWnd, (HMENU)1005, nullptr, nullptr);
-        gUrlBar = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
+        gUrlBar = CreateWindowExW(0, L"EDIT", L"",
             WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
             0, 0, 0, 0, hWnd, (HMENU)1004, nullptr, nullptr);
         SetWindowSubclass(gUrlBar, UrlBarProc, 0, 0);
+
+        SendMessageW(gTabCtrl, WM_SETFONT, (WPARAM)gFont, TRUE);
+        SendMessageW(gNewTabBtn, WM_SETFONT, (WPARAM)gFont, TRUE);
+        SendMessageW(gBackBtn, WM_SETFONT, (WPARAM)gFont, TRUE);
+        SendMessageW(gForwardBtn, WM_SETFONT, (WPARAM)gFont, TRUE);
+        SendMessageW(gRefreshBtn, WM_SETFONT, (WPARAM)gFont, TRUE);
+        SendMessageW(gSettingsBtn, WM_SETFONT, (WPARAM)gFont, TRUE);
+        SendMessageW(gUrlBar, WM_SETFONT, (WPARAM)gFont, TRUE);
 
         AddTab(hWnd, "https://google.com");
         ResizeChildren(hWnd);
@@ -138,6 +163,26 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
     }
     case WM_SIZE: {
         ResizeChildren(hWnd);
+        return 0;
+    }
+    case WM_CTLCOLORBTN: {
+        HDC hdc = (HDC)wParam;
+        SetBkMode(hdc, TRANSPARENT);
+        SetBkColor(hdc, RGB(240, 240, 240));
+        LONG state = (LONG)SendMessageW((HWND)lParam, BM_GETSTATE, 0, 0);
+        return (LRESULT)((state & BST_HOT) ? gHoverBrush : gBgBrush);
+    }
+    case WM_CTLCOLOREDIT: {
+        HDC hdc = (HDC)wParam;
+        SetBkMode(hdc, TRANSPARENT);
+        SetBkColor(hdc, RGB(240, 240, 240));
+        return (LRESULT)gBgBrush;
+    }
+    case WM_PAINT: {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hWnd, &ps);
+        FillRect(hdc, &ps.rcPaint, gBgBrush);
+        EndPaint(hWnd, &ps);
         return 0;
     }
     case WM_COMMAND: {
@@ -177,6 +222,9 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         return 0;
     }
     case WM_DESTROY:
+        DeleteObject(gBgBrush);
+        DeleteObject(gHoverBrush);
+        DeleteObject(gFont);
         PostQuitMessage(0);
         return 0;
     }
