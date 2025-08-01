@@ -2,22 +2,14 @@
 #include <windowsx.h>
 #include <commctrl.h>
 #include <vector>
-#include <string>
-#include <urlmon.h>
 #include <cstdlib>
-#include <cstring>
 #include <WebKit/WebKit2_C.h>
-#include <WebKit/WKPageLoaderClient.h>
-#include <WebKit/WKString.h>
 #include "buildinfo.h"
 
 #pragma comment(lib, "Comctl32.lib")
-#pragma comment(lib, "Urlmon.lib")
 
 struct Tab {
     WKViewRef view;
-    std::string url;
-    int imageIndex;
 };
 
 static std::vector<Tab> gTabs;
@@ -30,11 +22,10 @@ static HWND gForwardBtn;
 static HWND gRefreshBtn;
 static HWND gSettingsBtn;
 static HWND gNewTabBtn;
-static HWND gCloseTabBtn;
-static HIMAGELIST gTabImages;
 
 static const int TAB_HEIGHT = 24;
 static const int NAV_HEIGHT = 28;
+<<<<<<< HEAD
 static const char kUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Firefox/121.0 Safari/537.36 Cryptidium/1.0";
 
 static WKPageLoaderClientV0 gLoaderClient{};
@@ -157,13 +148,14 @@ static void CloseTab(HWND hWnd, int index)
     ShowCurrentTab();
     ResizeChildren(hWnd);
 }
+=======
+>>>>>>> parent of a2d9cee (Integrate tabs into app bar and add tab features)
 
 static void ResizeChildren(HWND hWnd)
 {
     RECT rc; GetClientRect(hWnd, &rc);
-    MoveWindow(gTabCtrl, 0, 0, rc.right - 60, TAB_HEIGHT, TRUE);
-    MoveWindow(gNewTabBtn, rc.right - 60, 0, 30, TAB_HEIGHT, TRUE);
-    MoveWindow(gCloseTabBtn, rc.right - 30, 0, 30, TAB_HEIGHT, TRUE);
+    MoveWindow(gTabCtrl, 0, 0, rc.right - 30, TAB_HEIGHT, TRUE);
+    MoveWindow(gNewTabBtn, rc.right - 30, 0, 30, TAB_HEIGHT, TRUE);
 
     int y = TAB_HEIGHT;
     MoveWindow(gBackBtn, 0, y, 30, NAV_HEIGHT, TRUE);
@@ -190,7 +182,6 @@ static void ShowCurrentTab()
 static void NavigateCurrent(const char* url)
 {
     if (gCurrentTab < 0) return;
-    gTabs[gCurrentTab].url = url;
     WKURLRef wkurl = WKURLCreateWithUTF8CString(url);
     WKPageLoadURL(WKViewGetPage(gTabs[gCurrentTab].view), wkurl);
 }
@@ -209,23 +200,14 @@ static void AddTab(HWND hWnd, const char* url)
     ShowWindow(child, SW_HIDE);
     WKViewSetIsInWindow(view, true);
 
-    EnsureLoaderClient();
-    WKPageRef page = WKViewGetPage(view);
-    WKPageSetPageLoaderClient(page, &gLoaderClient.base);
-    WKStringRef ua = WKStringCreateWithUTF8CString(kUserAgent);
-    WKPageSetCustomUserAgent(page, ua);
-    WKRelease(ua);
-
-    int imgIndex = ImageList_AddIcon(gTabImages, LoadIconW(NULL, IDI_APPLICATION));
-    gTabs.push_back({ view, url ? url : "", imgIndex });
+    gTabs.push_back({ view });
     int index = static_cast<int>(gTabs.size()) - 1;
 
     TCITEMW tie{};
-    tie.mask = TCIF_TEXT | TCIF_IMAGE;
+    tie.mask = TCIF_TEXT;
     wchar_t text[32];
     swprintf(text, 32, L"Tab %d", index + 1);
     tie.pszText = text;
-    tie.iImage = imgIndex;
     TabCtrl_InsertItem(gTabCtrl, index, &tie);
 
     gCurrentTab = index;
@@ -256,12 +238,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
 
         gTabCtrl = CreateWindowExW(0, WC_TABCONTROLW, L"", WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE,
             0, 0, 0, 0, hWnd, (HMENU)1007, nullptr, nullptr);
-        gTabImages = ImageList_Create(16, 16, ILC_COLOR32, 10, 10);
-        TabCtrl_SetImageList(gTabCtrl, gTabImages);
         gNewTabBtn = CreateWindowW(L"BUTTON", L"+", WS_CHILD | WS_VISIBLE,
             0, 0, 0, 0, hWnd, (HMENU)1006, nullptr, nullptr);
-        gCloseTabBtn = CreateWindowW(L"BUTTON", L"x", WS_CHILD | WS_VISIBLE,
-            0, 0, 0, 0, hWnd, (HMENU)1008, nullptr, nullptr);
         gBackBtn = CreateWindowW(L"BUTTON", L"<", WS_CHILD | WS_VISIBLE,
             0, 0, 0, 0, hWnd, (HMENU)1001, nullptr, nullptr);
         gForwardBtn = CreateWindowW(L"BUTTON", L">", WS_CHILD | WS_VISIBLE,
@@ -300,9 +278,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         case 1006:
             AddTab(hWnd, "https://google.com");
             break;
-        case 1008:
-            CloseTab(hWnd, gCurrentTab);
-            break;
         case 1004:
             if (HIWORD(wParam) == EN_RETURN) {
                 wchar_t wbuf[2048];
@@ -322,19 +297,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         }
         return 0;
     }
-    case WM_NCHITTEST: {
-        LRESULT hit = DefWindowProc(hWnd, msg, wParam, lParam);
-        if (hit == HTCLIENT) {
-            POINT pt{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
-            ScreenToClient(hWnd, &pt);
-            if (pt.y < TAB_HEIGHT)
-                return HTCAPTION;
-        }
-        return hit;
-    }
     case WM_DESTROY:
-        if (gTabImages)
-            ImageList_Destroy(gTabImages);
         PostQuitMessage(0);
         return 0;
     }
@@ -349,8 +312,13 @@ int RunBrowser(HINSTANCE hInst, int nCmdShow)
     wc.hInstance = hInst;
     wc.lpszClassName = cls;
 
+    HICON icon = (HICON)LoadImageW(nullptr, L"assets\\app.ico", IMAGE_ICON,
+        0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
+    wc.hIcon = icon;
+    wc.hIconSm = icon;
     RegisterClassExW(&wc);
 
+<<<<<<< HEAD
 <<<<<<< HEAD
     HWND win = CreateWindowExW(0, cls, L"", WS_OVERLAPPEDWINDOW & ~WS_CAPTION,
 =======
@@ -358,6 +326,11 @@ int RunBrowser(HINSTANCE hInst, int nCmdShow)
     swprintf(title, 128, L"Cryptidium %ls", BuildInfo::kVersionFormatted);
     HWND win = CreateWindowW(cls, title, WS_OVERLAPPEDWINDOW,
 >>>>>>> parent of cfc84aa (added basic ui)
+=======
+    wchar_t title[128];
+    swprintf(title, 128, L"Cryptidium");
+    HWND win = CreateWindowW(cls, title, WS_OVERLAPPEDWINDOW,
+>>>>>>> parent of a2d9cee (Integrate tabs into app bar and add tab features)
         CW_USEDEFAULT, CW_USEDEFAULT, 800, 600,
         nullptr, nullptr, hInst, nullptr);
     ShowWindow(win, nCmdShow);
