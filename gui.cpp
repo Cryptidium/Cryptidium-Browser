@@ -181,6 +181,18 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
     case WM_PAINT: {
         PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hWnd, &ps);
+        // Exclude WebKit child views from the region we fill so the browser
+        // content isn't overdrawn by the window background. This mirrors the
+        // behavior of WS_CLIPCHILDREN but explicitly guards against the blank
+        // window issue reported.
+        for (auto& t : gTabs) {
+            HWND child = WKViewGetWindow(t.view);
+            if (IsWindow(child)) {
+                RECT r; GetWindowRect(child, &r);
+                MapWindowPoints(nullptr, hWnd, (LPPOINT)&r, 2);
+                ExcludeClipRect(hdc, r.left, r.top, r.right, r.bottom);
+            }
+        }
         FillRect(hdc, &ps.rcPaint, gBgBrush);
         EndPaint(hWnd, &ps);
         return 0;
