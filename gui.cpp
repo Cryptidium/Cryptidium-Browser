@@ -247,7 +247,7 @@ int RunBrowser(HINSTANCE hInst, int nCmdShow)
 
     wchar_t title[128];
     swprintf(title, 128, L"Cryptidium");
-    HWND win = CreateWindowW(cls, title, WS_OVERLAPPEDWINDOW,
+    HWND win = CreateWindowW(cls, title, WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
         CW_USEDEFAULT, CW_USEDEFAULT, 800, 600,
         nullptr, nullptr, hInst, nullptr);
     ShowWindow(win, nCmdShow);
