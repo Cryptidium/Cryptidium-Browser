@@ -12,7 +12,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         WKPageConfigurationRef cfg = WKPageConfigurationCreate();
         WKContextRef ctx = WKContextCreateWithConfiguration(nullptr);
         WKPageConfigurationSetContext(cfg, ctx);
-        gView = WKViewCreate(hWnd, &rc, cfg);
+        gView = WKViewCreate(rc, cfg, hWnd);
 
         int argc; LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
         const char* def = "https://google.com";
