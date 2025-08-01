@@ -83,12 +83,14 @@
   <ImportGroup Label="ExtensionTargets" />
   <Target Name="AfterBuild">
     <ItemGroup>
-      <WebKitBinFiles Include="$(ProjectDir)\WebKit\bin\*.dll" />
-      <WebKitSupportFiles Include="$(ProjectDir)\WebKit\lib\*.*" Exclude="$(ProjectDir)\WebKit\lib\MiniBrowser.*" />
+      <WebKitBinFiles Include="$(ProjectDir)\WebKit\bin\*.*" />
+      <WebKitSupportFiles Include="$(ProjectDir)\WebKit\lib\*.*" Exclude="$(ProjectDir)\WebKit\lib\MiniBrowser*.*" />
       <AssetFiles Include="$(ProjectDir)\assets\*.*" />
     </ItemGroup>
     <Copy SourceFiles="@(WebKitBinFiles)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(AssetFiles)" DestinationFolder="$(OutDir)\Assets\" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(WebKitSupportFiles)" DestinationFolder="$(OutDir)\WebKit\%(RecursiveDir)" SkipUnchangedFiles="true" />
+
   </Target>
+  
 </Project>
