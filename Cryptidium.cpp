@@ -1,6 +1,11 @@
 #include <windows.h>
 #include <cstdlib>
 #include <WebKit/WebKit2_C.h>
+#include "gui.h"
+
+int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, PWSTR, int nCmdShow) {
+    return RunBrowser(hInst, nCmdShow);
+}
 
 static WKViewRef gView;
 
