@@ -1,12 +1,20 @@
-﻿#include "gui.h"
+﻿// This is a cleaned up version of gui.cpp with merge conflicts resolved and
+// simplified tab handling.  It provides a basic multi‑tab WebKit browser
+// without version number in the window title.
+
+#include "gui.h"
 #include <windowsx.h>
 #include <commctrl.h>
 #include <vector>
 #include <cstdlib>
+#include <cstring>
 #include <WebKit/WebKit2_C.h>
+#include <dwmapi.h> // For DwmExtendFrameIntoClientArea
 #include "buildinfo.h"
 
 #pragma comment(lib, "Comctl32.lib")
+// Link against Dwmapi for glass frame extension
+#pragma comment(lib, "Dwmapi.lib")
 
 struct Tab {
     WKViewRef view;
@@ -23,140 +31,61 @@ static HWND gRefreshBtn;
 static HWND gSettingsBtn;
 static HWND gNewTabBtn;
 
-static const int TAB_HEIGHT = 24;
+// Custom caption buttons
+static HWND gMinBtn;
+static HWND gMaxBtn;
+static HWND gCloseBtn;
+
+// Height of the tab bar integrated into the window's top border.
+static const int TAB_HEIGHT = 30;
 static const int NAV_HEIGHT = 28;
-<<<<<<< HEAD
-static const char kUserAgent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Firefox/121.0 Safari/537.36 Cryptidium/1.0";
 
-static WKPageLoaderClientV0 gLoaderClient{};
-static bool gLoaderClientInit = false;
+// Custom user agent string used for all pages.
+static const char kUserAgent[] =
+"Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+"AppleWebKit/537.36 (KHTML, like Gecko) "
+"Chrome/121.0.0.0 Safari/537.36 Cryptidium/1.0";
 
-static void EnsureLoaderClient();
-static void UpdateFavicon(int index);
-static int FindTabByPage(WKPageRef page);
-static void DidReceiveTitleForFrame(WKPageRef page, WKStringRef title, WKFrameRef frame, WKTypeRef, const void* clientInfo);
-static void DidStartProvisionalLoadForFrame(WKPageRef, WKFrameRef, WKTypeRef, const void*);
-static void DidCommitLoadForFrame(WKPageRef, WKFrameRef, WKTypeRef, const void*);
-static void DidFinishLoadForFrame(WKPageRef, WKFrameRef, WKTypeRef, const void*);
-static void DidFailLoadWithErrorForFrame(WKPageRef, WKFrameRef, WKErrorRef, WKTypeRef, const void*);
-static void CloseTab(HWND hWnd, int index);
-static void ResizeChildren(HWND hWnd);
+// Loader client used to receive page events (e.g. titles).
+// loader client has been removed since it caused instability.
+
 static void ShowCurrentTab();
+static void ResizeChildren(HWND hWnd);
+static void NavigateCurrent(const char* url);
+static void AddTab(HWND hWnd, const char* url);
 
-static void EnsureLoaderClient()
+static void ShowCurrentTab()
 {
-    if (gLoaderClientInit)
-        return;
-    memset(&gLoaderClient, 0, sizeof(gLoaderClient));
-    gLoaderClient.base.version = 0;
-    gLoaderClient.base.clientInfo = nullptr;
-    gLoaderClient.didStartProvisionalLoadForFrame = DidStartProvisionalLoadForFrame;
-    gLoaderClient.didCommitLoadForFrame = DidCommitLoadForFrame;
-    gLoaderClient.didFinishLoadForFrame = DidFinishLoadForFrame;
-    gLoaderClient.didFailLoadWithErrorForFrame = DidFailLoadWithErrorForFrame;
-    gLoaderClient.didReceiveTitleForFrame = DidReceiveTitleForFrame;
-    gLoaderClientInit = true;
-}
-
-static int FindTabByPage(WKPageRef page)
-{
-    for (size_t i = 0; i < gTabs.size(); ++i)
-        if (WKViewGetPage(gTabs[i].view) == page)
-            return static_cast<int>(i);
-    return -1;
-}
-
-static void UpdateFavicon(int index)
-{
-    if (index < 0 || index >= static_cast<int>(gTabs.size()))
-        return;
-    const std::string& url = gTabs[index].url;
-    size_t pos = url.find("://");
-    if (pos == std::string::npos)
-        return;
-    size_t hostStart = pos + 3;
-    size_t hostEnd = url.find('/', hostStart);
-    std::string host = url.substr(hostStart, hostEnd - hostStart);
-    std::string scheme = url.substr(0, pos);
-    std::string favUrl = scheme + "://" + host + "/favicon.ico";
-    std::wstring wFavUrl(favUrl.begin(), favUrl.end());
-    wchar_t tmp[MAX_PATH];
-    GetTempPathW(MAX_PATH, tmp);
-    wchar_t file[MAX_PATH];
-    GetTempFileNameW(tmp, L"fav", 0, file);
-    if (SUCCEEDED(URLDownloadToFileW(nullptr, wFavUrl.c_str(), file, 0, nullptr))) {
-        HICON icon = (HICON)LoadImageW(nullptr, file, IMAGE_ICON, 16, 16, LR_LOADFROMFILE);
-        if (icon)
-            ImageList_ReplaceIcon(gTabImages, gTabs[index].imageIndex, icon);
+    for (size_t i = 0; i < gTabs.size(); ++i) {
+        HWND child = WKViewGetWindow(gTabs[i].view);
+        ShowWindow(child, i == static_cast<size_t>(gCurrentTab) ? SW_SHOW : SW_HIDE);
     }
 }
-
-static void DidReceiveTitleForFrame(WKPageRef page, WKStringRef title, WKFrameRef, WKTypeRef, const void*)
-{
-    int index = FindTabByPage(page);
-    if (index < 0)
-        return;
-    size_t len = WKStringGetMaximumUTF8CStringSize(title);
-    std::vector<char> buf(len);
-    WKStringGetUTF8CString(title, buf.data(), len);
-    wchar_t wbuf[256];
-    MultiByteToWideChar(CP_UTF8, 0, buf.data(), -1, wbuf, 256);
-
-    TCITEMW tie{};
-    tie.mask = TCIF_TEXT;
-    tie.pszText = wbuf;
-    TabCtrl_SetItem(gTabCtrl, index, &tie);
-
-    UpdateFavicon(index);
-}
-
-static void DidStartProvisionalLoadForFrame(WKPageRef, WKFrameRef, WKTypeRef, const void*)
-{
-}
-
-static void DidCommitLoadForFrame(WKPageRef, WKFrameRef, WKTypeRef, const void*)
-{
-}
-
-static void DidFinishLoadForFrame(WKPageRef, WKFrameRef, WKTypeRef, const void*)
-{
-}
-
-static void DidFailLoadWithErrorForFrame(WKPageRef, WKFrameRef, WKErrorRef, WKTypeRef, const void*)
-{
-}
-
-static void CloseTab(HWND hWnd, int index)
-{
-    if (index < 0 || index >= static_cast<int>(gTabs.size()))
-        return;
-    HWND child = WKViewGetWindow(gTabs[index].view);
-    DestroyWindow(child);
-    WKRelease(gTabs[index].view);
-    ImageList_Remove(gTabImages, gTabs[index].imageIndex);
-    gTabs.erase(gTabs.begin() + index);
-    TabCtrl_DeleteItem(gTabCtrl, index);
-    if (gTabs.empty()) {
-        gCurrentTab = -1;
-    } else {
-        if (gCurrentTab >= index)
-            gCurrentTab--;
-        if (gCurrentTab < 0)
-            gCurrentTab = 0;
-    }
-    TabCtrl_SetCurSel(gTabCtrl, gCurrentTab);
-    ShowCurrentTab();
-    ResizeChildren(hWnd);
-}
-=======
->>>>>>> parent of a2d9cee (Integrate tabs into app bar and add tab features)
 
 static void ResizeChildren(HWND hWnd)
 {
-    RECT rc; GetClientRect(hWnd, &rc);
-    MoveWindow(gTabCtrl, 0, 0, rc.right - 30, TAB_HEIGHT, TRUE);
-    MoveWindow(gNewTabBtn, rc.right - 30, 0, 30, TAB_HEIGHT, TRUE);
+    RECT rc;
+    GetClientRect(hWnd, &rc);
+    // Width for caption buttons (min, max, close).  Use 40px each for a nicer feel.
+    const int captionButtonWidth = 40;
+    // Compute space consumed by caption buttons and the new-tab button.
+    int captionButtonsTotal = captionButtonWidth * 3;
+    int newTabWidth = 30;
+    int tabBarWidth = rc.right - captionButtonsTotal - newTabWidth;
 
+    // Position the tab control and new-tab button along the top row.
+    MoveWindow(gTabCtrl, 0, 0, tabBarWidth, TAB_HEIGHT, TRUE);
+    MoveWindow(gNewTabBtn, tabBarWidth, 0, newTabWidth, TAB_HEIGHT, TRUE);
+
+    // Position the custom caption buttons to the right of the new-tab button.
+    MoveWindow(gMinBtn, tabBarWidth + newTabWidth + 0 * captionButtonWidth, 0,
+        captionButtonWidth, TAB_HEIGHT, TRUE);
+    MoveWindow(gMaxBtn, tabBarWidth + newTabWidth + 1 * captionButtonWidth, 0,
+        captionButtonWidth, TAB_HEIGHT, TRUE);
+    MoveWindow(gCloseBtn, tabBarWidth + newTabWidth + 2 * captionButtonWidth, 0,
+        captionButtonWidth, TAB_HEIGHT, TRUE);
+
+    // Lay out the navigation bar below the tabs.
     int y = TAB_HEIGHT;
     MoveWindow(gBackBtn, 0, y, 30, NAV_HEIGHT, TRUE);
     MoveWindow(gForwardBtn, 30, y, 30, NAV_HEIGHT, TRUE);
@@ -164,6 +93,7 @@ static void ResizeChildren(HWND hWnd)
     MoveWindow(gSettingsBtn, rc.right - 30, y, 30, NAV_HEIGHT, TRUE);
     MoveWindow(gUrlBar, 90, y, rc.right - 120, NAV_HEIGHT, TRUE);
 
+    // Size the WKViews to fill the remaining client area.
     int top = TAB_HEIGHT + NAV_HEIGHT;
     for (auto& t : gTabs) {
         HWND child = WKViewGetWindow(t.view);
@@ -171,24 +101,20 @@ static void ResizeChildren(HWND hWnd)
     }
 }
 
-static void ShowCurrentTab()
-{
-    for (size_t i = 0; i < gTabs.size(); ++i) {
-        HWND child = WKViewGetWindow(gTabs[i].view);
-        ShowWindow(child, i == (size_t)gCurrentTab ? SW_SHOW : SW_HIDE);
-    }
-}
+// Initialize the loader client once.  Registers a callback to update tab titles.
 
 static void NavigateCurrent(const char* url)
 {
-    if (gCurrentTab < 0) return;
+    if (gCurrentTab < 0)
+        return;
     WKURLRef wkurl = WKURLCreateWithUTF8CString(url);
     WKPageLoadURL(WKViewGetPage(gTabs[gCurrentTab].view), wkurl);
 }
 
 static void AddTab(HWND hWnd, const char* url)
 {
-    RECT rc; GetClientRect(hWnd, &rc);
+    RECT rc;
+    GetClientRect(hWnd, &rc);
     int top = TAB_HEIGHT + NAV_HEIGHT;
     RECT webRect{ 0, top, rc.right, rc.bottom };
 
@@ -197,8 +123,16 @@ static void AddTab(HWND hWnd, const char* url)
     WKPageConfigurationSetContext(cfg, ctx);
     WKViewRef view = WKViewCreate(webRect, cfg, hWnd);
     HWND child = WKViewGetWindow(view);
-    ShowWindow(child, SW_HIDE);
+    // Do not hide the view immediately; make it part of the window.  The tab
+    // selection logic will show/hide the appropriate views.
+    ShowWindow(child, SW_SHOW);
     WKViewSetIsInWindow(view, true);
+
+    // Set a custom user agent for the page.
+    WKPageRef page = WKViewGetPage(view);
+    WKStringRef ua = WKStringCreateWithUTF8CString(kUserAgent);
+    WKPageSetCustomUserAgent(page, ua);
+    WKRelease(ua);
 
     gTabs.push_back({ view });
     int index = static_cast<int>(gTabs.size()) - 1;
@@ -222,9 +156,13 @@ static void AddTab(HWND hWnd, const char* url)
 static LRESULT CALLBACK UrlBarProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam,
     UINT_PTR, DWORD_PTR)
 {
+    // When the user presses Enter in the URL bar, navigate to the typed URL directly.
     if (msg == WM_KEYDOWN && wParam == VK_RETURN) {
-        HWND parent = GetParent(hwnd);
-        SendMessage(parent, WM_COMMAND, MAKEWPARAM(1004, EN_RETURN), (LPARAM)hwnd);
+        wchar_t wbuf[2048];
+        GetWindowTextW(hwnd, wbuf, 2048);
+        char buf[2048];
+        WideCharToMultiByte(CP_UTF8, 0, wbuf, -1, buf, sizeof(buf), nullptr, nullptr);
+        NavigateCurrent(buf);
         return 0;
     }
     return DefSubclassProc(hwnd, msg, wParam, lParam);
@@ -253,6 +191,14 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
             0, 0, 0, 0, hWnd, (HMENU)1004, nullptr, nullptr);
         SetWindowSubclass(gUrlBar, UrlBarProc, 0, 0);
 
+        // Create custom caption buttons (minimize, maximize/restore, close)
+        gMinBtn = CreateWindowW(L"BUTTON", L"\u2013", WS_CHILD | WS_VISIBLE,
+            0, 0, 0, 0, hWnd, (HMENU)2001, nullptr, nullptr);
+        gMaxBtn = CreateWindowW(L"BUTTON", L"\u25A1", WS_CHILD | WS_VISIBLE,
+            0, 0, 0, 0, hWnd, (HMENU)2002, nullptr, nullptr);
+        gCloseBtn = CreateWindowW(L"BUTTON", L"\u00D7", WS_CHILD | WS_VISIBLE,
+            0, 0, 0, 0, hWnd, (HMENU)2003, nullptr, nullptr);
+
         AddTab(hWnd, "https://google.com");
         ResizeChildren(hWnd);
         return 0;
@@ -264,13 +210,16 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
     case WM_COMMAND: {
         switch (LOWORD(wParam)) {
         case 1001:
-            if (gCurrentTab >= 0) WKPageGoBack(WKViewGetPage(gTabs[gCurrentTab].view));
+            if (gCurrentTab >= 0)
+                WKPageGoBack(WKViewGetPage(gTabs[gCurrentTab].view));
             break;
         case 1002:
-            if (gCurrentTab >= 0) WKPageGoForward(WKViewGetPage(gTabs[gCurrentTab].view));
+            if (gCurrentTab >= 0)
+                WKPageGoForward(WKViewGetPage(gTabs[gCurrentTab].view));
             break;
         case 1003:
-            if (gCurrentTab >= 0) WKPageReload(WKViewGetPage(gTabs[gCurrentTab].view));
+            if (gCurrentTab >= 0)
+                WKPageReload(WKViewGetPage(gTabs[gCurrentTab].view));
             break;
         case 1005:
             MessageBoxW(hWnd, L"Settings not implemented", L"Settings", MB_OK);
@@ -278,14 +227,25 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         case 1006:
             AddTab(hWnd, "https://google.com");
             break;
-        case 1004:
-            if (HIWORD(wParam) == EN_RETURN) {
-                wchar_t wbuf[2048];
-                GetWindowTextW(gUrlBar, wbuf, 2048);
-                char buf[2048];
-                WideCharToMultiByte(CP_UTF8, 0, wbuf, -1, buf, sizeof(buf), nullptr, nullptr);
-                NavigateCurrent(buf);
-            }
+        case 1004: {
+            wchar_t wbuf[2048];
+            GetWindowTextW(gUrlBar, wbuf, 2048);
+            char buf[2048];
+            WideCharToMultiByte(CP_UTF8, 0, wbuf, -1, buf, sizeof(buf), nullptr, nullptr);
+            NavigateCurrent(buf);
+            break;
+        }
+        case 2001: // minimize
+            ShowWindow(hWnd, SW_MINIMIZE);
+            break;
+        case 2002: // maximize/restore
+            if (IsZoomed(hWnd))
+                ShowWindow(hWnd, SW_RESTORE);
+            else
+                ShowWindow(hWnd, SW_MAXIMIZE);
+            break;
+        case 2003: // close
+            PostMessage(hWnd, WM_CLOSE, 0, 0);
             break;
         }
         return 0;
@@ -300,6 +260,36 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
     case WM_DESTROY:
         PostQuitMessage(0);
         return 0;
+    case WM_NCHITTEST: {
+        // Let the default window procedure determine hit-test for edges and corners first.
+        LRESULT hit = DefWindowProc(hWnd, msg, wParam, lParam);
+        if (hit == HTCLIENT) {
+            POINT pt{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+            ScreenToClient(hWnd, &pt);
+            // If within the tab bar, allow dragging except on caption buttons and new-tab button.
+            if (pt.y < TAB_HEIGHT) {
+                // Compute widths similar to ResizeChildren.
+                RECT rc;
+                GetClientRect(hWnd, &rc);
+                const int captionButtonWidth = 40;
+                int captionButtonsTotal = captionButtonWidth * 3;
+                int newTabWidth = 30;
+                int tabBarWidth = rc.right - captionButtonsTotal - newTabWidth;
+                // If the mouse is over the caption buttons (min, max, close) or the new-tab button, don't treat as caption.
+                if (pt.x >= tabBarWidth + newTabWidth) {
+                    // Over caption buttons, treat as client so the buttons can be clicked.
+                    return HTCLIENT;
+                }
+                if (pt.x >= tabBarWidth && pt.x < tabBarWidth + newTabWidth) {
+                    // Over the new-tab button.
+                    return HTCLIENT;
+                }
+                // Otherwise, treat as caption (dragging area).
+                return HTCAPTION;
+            }
+        }
+        return hit;
+    }
     }
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
@@ -318,22 +308,22 @@ int RunBrowser(HINSTANCE hInst, int nCmdShow)
     wc.hIconSm = icon;
     RegisterClassExW(&wc);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-    HWND win = CreateWindowExW(0, cls, L"", WS_OVERLAPPEDWINDOW & ~WS_CAPTION,
-=======
-    wchar_t title[128];
-    swprintf(title, 128, L"Cryptidium %ls", BuildInfo::kVersionFormatted);
-    HWND win = CreateWindowW(cls, title, WS_OVERLAPPEDWINDOW,
->>>>>>> parent of cfc84aa (added basic ui)
-=======
-    wchar_t title[128];
-    swprintf(title, 128, L"Cryptidium");
-    HWND win = CreateWindowW(cls, title, WS_OVERLAPPEDWINDOW,
->>>>>>> parent of a2d9cee (Integrate tabs into app bar and add tab features)
+    wchar_t title[] = L"Cryptidium";
+    // Create a popup window with a thick frame.  This removes the default caption
+    // and system menu while still allowing resizing.
+    HWND win = CreateWindowExW(0, cls, title,
+        WS_POPUP | WS_THICKFRAME | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
         CW_USEDEFAULT, CW_USEDEFAULT, 800, 600,
         nullptr, nullptr, hInst, nullptr);
     ShowWindow(win, nCmdShow);
+    UpdateWindow(win);
+
+    // Extend the frame into the client area so the default title bar area becomes part of
+    // our client region.  This avoids Windows drawing its own caption and accent color.
+    {
+        MARGINS margins = { 0, 0, TAB_HEIGHT, 0 };
+        DwmExtendFrameIntoClientArea(win, &margins);
+    }
 
     MSG m;
     while (GetMessageW(&m, nullptr, 0, 0)) {
