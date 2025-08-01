@@ -77,11 +77,10 @@
   <ImportGroup Label="ExtensionTargets" />
   <Target Name="AfterBuild">
     <ItemGroup>
-      <WebKitBinDlls Include="$(ProjectDir)\WebKit\bin\*.dll" />
+      <WebKitBinFiles Include="$(ProjectDir)\WebKit\bin\*.*" />
     </ItemGroup>
-
     <Copy
-      SourceFiles="@(WebKitBinDlls)"
+      SourceFiles="@(WebKitBinFiles)"
       DestinationFolder="$(OutDir)"
       SkipUnchangedFiles="true" />
   </Target>
