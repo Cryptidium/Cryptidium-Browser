@@ -1,6 +1,6 @@
 #include <windows.h>
 #include <cstdlib>
-#include <WebKit/WebKit.h>
+#include <WebKit/WebKit2_C.h>
 
 static WKViewRef gView;
 
