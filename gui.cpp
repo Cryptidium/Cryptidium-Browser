@@ -50,6 +50,7 @@ static int FindTabByPage(WKPageRef page);
 static void DidReceiveTitleForFrame(WKPageRef page, WKStringRef title, WKFrameRef frame, WKTypeRef, const void* clientInfo);
 static void CloseTab(HWND hWnd, int index);
 static void ResizeChildren(HWND hWnd);
+static void ShowCurrentTab();
 
 static void EnsureLoaderClient()
 {
