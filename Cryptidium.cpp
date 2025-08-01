@@ -32,7 +32,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     case WM_SIZE: {
         if (gView) {
             RECT rc; GetClientRect(hWnd, &rc);
-            WKViewSetFrame(gView, &rc);
+            HWND child = WKViewGetWindow(gView);
+            MoveWindow(child,
+                rc.left, rc.top,
+                rc.right - rc.left,
+                rc.bottom - rc.top,
+                TRUE);
         }
         return 0;
     }

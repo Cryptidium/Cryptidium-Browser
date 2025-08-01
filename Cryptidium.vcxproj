@@ -75,4 +75,14 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
+  <Target Name="AfterBuild">
+    <ItemGroup>
+      <WebKitBinDlls Include="$(ProjectDir)\WebKit\bin\*.dll" />
+    </ItemGroup>
+
+    <Copy
+      SourceFiles="@(WebKitBinDlls)"
+      DestinationFolder="$(OutDir)"
+      SkipUnchangedFiles="true" />
+  </Target>
 </Project>
