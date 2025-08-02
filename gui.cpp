@@ -4,9 +4,20 @@
 #include <commctrl.h>
 #include <vector>
 #include <WebKit/WebKit2_C.h>
+#include <string>
 #include "buildinfo.h"
 
 #pragma comment(lib, "Comctl32.lib")
+
+static std::string MakeUserAgent()
+{
+    std::wstring wver = BuildInfo::kVersionFormatted;
+    return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+           "Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0 Cryptidium "
+           + std::string(wver.begin(), wver.end());
+}
+
+static std::string gUserAgent = MakeUserAgent();
 
 struct Tab {
     WKViewRef view;
@@ -69,6 +80,10 @@ static void AddTab(HWND hWnd, const char* url)
     WKContextRef ctx = WKContextCreateWithConfiguration(nullptr);
     WKPageConfigurationSetContext(cfg, ctx);
     WKViewRef view = WKViewCreate(webRect, cfg, hWnd);
+    WKPageRef page = WKViewGetPage(view);
+    WKStringRef ua = WKStringCreateWithUTF8CString(gUserAgent.c_str());
+    WKPageSetCustomUserAgent(page, ua);
+    WKRelease(ua);
     HWND child = WKViewGetWindow(view);
     ShowWindow(child, SW_HIDE);
     WKViewSetIsInWindow(view, true);
@@ -172,6 +187,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
 
 int RunBrowser(HINSTANCE hInst, int nCmdShow)
 {
+    BuildInfo::ProcessUpdates();
     WNDCLASSEXW wc{};
     wc.cbSize = sizeof(wc);
     wc.lpfnWndProc = WndProc;
