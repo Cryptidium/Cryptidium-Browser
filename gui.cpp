@@ -44,6 +44,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         WKContextRef ctx = WKContextCreateWithConfiguration(nullptr);
         WKPageConfigurationSetContext(cfg, ctx);
         gMainView = WKViewCreate(rc, cfg, hWnd);
+        WKRelease(ctx);
+        WKRelease(cfg);
         HWND child = WKViewGetWindow(gMainView);
         ShowWindow(child, SW_SHOW);
         WKViewSetIsInWindow(gMainView, true);
@@ -54,6 +56,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         ResizeView(hWnd);
         return 0;
     case WM_DESTROY:
+        if (gMainView) {
+            WKRelease(gMainView);
+            gMainView = nullptr;
+        }
         PostQuitMessage(0);
         return 0;
     }

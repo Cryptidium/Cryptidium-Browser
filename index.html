@@ -177,7 +177,8 @@
             );
         }
 
-        ReactDOM.render(React.createElement(BrowserApp), document.getElementById('root'));
-    </script>
-</body>
-</html>
+          const root = ReactDOM.createRoot(document.getElementById('root'));
+          root.render(React.createElement(BrowserApp));
+      </script>
+  </body>
+  </html>
