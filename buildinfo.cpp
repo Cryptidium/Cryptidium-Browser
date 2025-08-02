@@ -25,9 +25,9 @@ std::wstring DownloadFirstLine(const wchar_t* url) {
 bool IsNewerVersion(const std::wstring& latest, const wchar_t* current) {
     unsigned lm = 0, lmi = 0, lp = 0;
     unsigned cm = 0, cmi = 0, cp = 0;
-    if (swscanf(latest.c_str(), L"%u.%u.%u", &lm, &lmi, &lp) != 3)
+    if (swscanf_s(latest.c_str(), L"%u.%u.%u", &lm, &lmi, &lp) != 3)
         return false;
-    if (swscanf(current, L"%u.%u.%u", &cm, &cmi, &cp) != 3)
+    if (swscanf_s(current, L"%u.%u.%u", &cm, &cmi, &cp) != 3)
         return false;
     if (lm != cm) return lm > cm;
     if (lmi != cmi) return lmi > cmi;
@@ -50,13 +50,13 @@ void BuildInfo::ProcessUpdates() {
         std::wstring build = DownloadFirstLine((base + L"latestbetabuild").c_str());
         if (!build.empty()) {
             unsigned lb = 0;
-            if (swscanf(build.c_str(), L"%u", &lb) == 1 && lb > kBetaBuild)
+            if (swscanf_s(build.c_str(), L"%u", &lb) == 1 && lb > kBetaBuild)
                 needsUpdate = true;
         }
     }
 
     if (needsUpdate) {
-        const wchar_t* site = kIsBeta ? L"https://cryptidium.vercel.app/beta" : L"https://cryptidium.vercel.app";
+        const wchar_t* site = kIsBeta ? L"https://cryptidium.vercel.app" : L"https://cryptidium.vercel.app";
         std::wstring msg = L"A new update (" + name + L") is available. Visit " + site + L" to download.";
         MessageBoxW(nullptr, msg.c_str(), L"Update available", MB_OK | MB_ICONINFORMATION);
     }
