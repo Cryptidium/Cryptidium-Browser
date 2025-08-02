@@ -76,7 +76,6 @@
     <ClCompile Include="gui.cpp" />
     <ClInclude Include="buildinfo.h" />
     <ClInclude Include="gui.h" />
-    <ClInclude Include="index.html" />
     <None Include="assets\app.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
@@ -90,7 +89,5 @@
     <Copy SourceFiles="@(WebKitBinFiles)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(AssetFiles)" DestinationFolder="$(OutDir)\Assets\" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(WebKitSupportFiles)" DestinationFolder="$(OutDir)\WebKit\%(RecursiveDir)" SkipUnchangedFiles="true" />
-
   </Target>
-  
 </Project>

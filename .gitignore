@@ -2,5 +2,6 @@ WebKit*
 Cryptidium*
 x64*
 !CryptidiumWinUI/
+!CryptidiumWinUI/**
 CryptidiumWinUI/obj/
 CryptidiumWinUI/bin/
