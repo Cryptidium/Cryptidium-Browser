@@ -4,6 +4,8 @@ VisualStudioVersion = 17.0.31912.275
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Cryptidium", "Cryptidium.vcxproj", "{01B3D0AE-FE89-4F83-8E5F-2EED3E1D32D4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptidiumWinUI", "CryptidiumWinUI/CryptidiumWinUI.csproj", "{194AFC43-FD1E-467B-9928-24BB29D0C45B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -14,6 +16,10 @@ Global
 		{01B3D0AE-FE89-4F83-8E5F-2EED3E1D32D4}.Debug|x64.Build.0 = Debug|x64
 		{01B3D0AE-FE89-4F83-8E5F-2EED3E1D32D4}.Release|x64.ActiveCfg = Release|x64
 		{01B3D0AE-FE89-4F83-8E5F-2EED3E1D32D4}.Release|x64.Build.0 = Release|x64
+		{194AFC43-FD1E-467B-9928-24BB29D0C45B}.Debug|x64.ActiveCfg = Debug|x64
+		{194AFC43-FD1E-467B-9928-24BB29D0C45B}.Debug|x64.Build.0 = Debug|x64
+		{194AFC43-FD1E-467B-9928-24BB29D0C45B}.Release|x64.ActiveCfg = Release|x64
+		{194AFC43-FD1E-467B-9928-24BB29D0C45B}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

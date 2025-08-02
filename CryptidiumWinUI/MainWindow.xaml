@@ -1,0 +1,21 @@
+<Window
+    x:Class="Cryptidium.WinUI.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Microsoft.UI.Xaml.Controls"
+    Title="Cryptidium">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <StackPanel Orientation="Horizontal" Spacing="4">
+            <Button x:Name="BackButton" Content="Back" Click="OnBackClicked"/>
+            <Button x:Name="ForwardButton" Content="Forward" Click="OnForwardClicked"/>
+            <Button x:Name="RefreshButton" Content="Refresh" Click="OnRefreshClicked"/>
+            <TextBox x:Name="AddressBar" Width="400" KeyDown="OnAddressKeyDown"/>
+            <Button x:Name="NewTabButton" Content="New Tab" Click="OnNewTabClicked"/>
+        </StackPanel>
+        <controls:TabView x:Name="BrowserTabs" Grid.Row="1" SelectionChanged="OnTabSelectionChanged"/>
+    </Grid>
+</Window>
