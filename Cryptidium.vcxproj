@@ -75,8 +75,10 @@
     <ClCompile Include="Cryptidium.cpp" />
     <ClCompile Include="buildinfo.cpp" />
     <ClCompile Include="gui.cpp" />
+    <ClCompile Include="settings.cpp" />
     <ClInclude Include="buildinfo.h" />
     <ClInclude Include="gui.h" />
+    <ClInclude Include="settings.h" />
     <None Include="assets\app.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

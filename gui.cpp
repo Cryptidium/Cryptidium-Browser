@@ -6,6 +6,7 @@
 #include <WebKit/WebKit2_C.h>
 #include <string>
 #include "buildinfo.h"
+#include "settings.h"
 
 #pragma comment(lib, "Comctl32.lib")
 
@@ -31,9 +32,29 @@ static HWND gBackBtn;
 static HWND gForwardBtn;
 static HWND gRefreshBtn;
 static HWND gNewTabBtn;
+static HWND gSettingsBtn;
 
 static const int TAB_HEIGHT = 24;
 static const int NAV_HEIGHT = 28;
+
+static void UpdateUrlBarFromPage(WKPageRef page)
+{
+    WKURLRef url = WKPageCopyActiveURL(page);
+    if (!url)
+        return;
+    WKStringRef str = WKURLCopyString(url);
+    size_t max = WKStringGetMaximumUTF8CStringSize(str);
+    std::string tmp(max, '\0');
+    WKStringGetUTF8CString(str, tmp.data(), max);
+    std::string text = tmp.c_str();
+    WKRelease(str);
+    WKRelease(url);
+    if (text.rfind("https://", 0) == 0)
+        text.erase(0, 8);
+    std::wstring wtext(text.begin(), text.end());
+    SetWindowTextW(gUrlBar, wtext.c_str());
+}
+
 
 static void ShowCurrentTab()
 {
@@ -53,7 +74,8 @@ static void ResizeChildren(HWND hWnd)
     MoveWindow(gBackBtn, 0, y, 30, NAV_HEIGHT, TRUE);
     MoveWindow(gForwardBtn, 30, y, 30, NAV_HEIGHT, TRUE);
     MoveWindow(gRefreshBtn, 60, y, 30, NAV_HEIGHT, TRUE);
-    MoveWindow(gUrlBar, 90, y, rc.right - 90, NAV_HEIGHT, TRUE);
+    MoveWindow(gSettingsBtn, 90, y, 30, NAV_HEIGHT, TRUE);
+    MoveWindow(gUrlBar, 120, y, rc.right - 120, NAV_HEIGHT, TRUE);
     int top = TAB_HEIGHT + NAV_HEIGHT;
     for (auto& t : gTabs) {
         HWND child = WKViewGetWindow(t.view);
@@ -83,6 +105,12 @@ static void AddTab(HWND hWnd, const char* url)
     WKStringRef ua = WKStringCreateWithUTF8CString(gUserAgent.c_str());
     WKPageSetCustomUserAgent(page, ua);
     WKRelease(ua);
+    static WKPageNavigationClientV0 navClient;
+    navClient.base.version = 0;
+    navClient.didFinishNavigation = [](WKPageRef p, WKNavigationRef, WKTypeRef, const void*) {
+        UpdateUrlBarFromPage(p);
+    };
+    WKPageSetPageNavigationClient(page, &navClient.base);
     HWND child = WKViewGetWindow(view);
     ShowWindow(child, SW_HIDE);
     WKViewSetIsInWindow(view, true);
@@ -111,7 +139,23 @@ static LRESULT CALLBACK UrlBarProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
         GetWindowTextW(hwnd, wbuf, 2048);
         char buf[2048];
         WideCharToMultiByte(CP_UTF8, 0, wbuf, -1, buf, sizeof(buf), nullptr, nullptr);
-        NavigateCurrent(buf);
+        std::string input = buf;
+        std::string display = input;
+        std::string url;
+        if (input.find(' ') != std::string::npos) {
+            for (char& c : input)
+                if (c == ' ')
+                    c = '+';
+            url = "https://www.google.com/search?q=" + input;
+        } else {
+            if (input.rfind("https://", 0) == 0)
+                input.erase(0, 8);
+            url = "https://" + input;
+            display = input;
+        }
+        std::wstring wdisp(display.begin(), display.end());
+        SetWindowTextW(gUrlBar, wdisp.c_str());
+        NavigateCurrent(url.c_str());
         return 0;
     }
     return DefSubclassProc(hwnd, msg, wParam, lParam);
@@ -132,6 +176,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
                                     0, 0, 0, 0, hWnd, (HMENU)1003, nullptr, nullptr);
         gRefreshBtn = CreateWindowW(L"BUTTON", L"R", WS_CHILD | WS_VISIBLE,
                                     0, 0, 0, 0, hWnd, (HMENU)1004, nullptr, nullptr);
+        gSettingsBtn = CreateWindowW(L"BUTTON", L"S", WS_CHILD | WS_VISIBLE,
+                                     0, 0, 0, 0, hWnd, (HMENU)1006, nullptr, nullptr);
         gUrlBar = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"", WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
                                   0, 0, 0, 0, hWnd, (HMENU)1005, nullptr, nullptr);
         SetWindowSubclass(gUrlBar, UrlBarProc, 0, 0);
@@ -154,26 +200,23 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
             if (gCurrentTab >= 0)
                 WKPageGoForward(WKViewGetPage(gTabs[gCurrentTab].view));
             break;
-        case 1004:
-            if (gCurrentTab >= 0)
-                WKPageReload(WKViewGetPage(gTabs[gCurrentTab].view));
-            break;
-        case 1005: {
-            wchar_t wbuf[2048];
-            GetWindowTextW(gUrlBar, wbuf, 2048);
-            char buf[2048];
-            WideCharToMultiByte(CP_UTF8, 0, wbuf, -1, buf, sizeof(buf), nullptr, nullptr);
-            NavigateCurrent(buf);
-            break;
-        }
-        }
-        return 0;
-    }
+          case 1004:
+              if (gCurrentTab >= 0)
+                  WKPageReload(WKViewGetPage(gTabs[gCurrentTab].view));
+              break;
+          case 1006:
+              ShowSettings(hWnd);
+              break;
+          }
+          return 0;
+      }
     case WM_NOTIFY: {
         LPNMHDR nm = (LPNMHDR)lParam;
         if (nm->hwndFrom == gTabCtrl && nm->code == TCN_SELCHANGE) {
             gCurrentTab = TabCtrl_GetCurSel(gTabCtrl);
             ShowCurrentTab();
+            if (gCurrentTab >= 0)
+                UpdateUrlBarFromPage(WKViewGetPage(gTabs[gCurrentTab].view));
         }
         return 0;
     }
