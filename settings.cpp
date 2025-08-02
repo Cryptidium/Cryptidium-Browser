@@ -25,9 +25,13 @@ static LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPAR
     case WM_CREATE: {
         wchar_t ver[64];
         wsprintfW(ver, L"Version: %s", BuildInfo::kVersionFormatted);
-        CreateWindowW(L"STATIC", ver, WS_CHILD | WS_VISIBLE, 10, 10, 250, 20, hwnd, nullptr, nullptr, nullptr);
-        CreateWindowW(L"BUTTON", L"Clear Cookies", WS_CHILD | WS_VISIBLE, 10, 40, 110, 24, hwnd, (HMENU)2001, nullptr, nullptr);
-        CreateWindowW(L"BUTTON", L"Clear Cache", WS_CHILD | WS_VISIBLE, 130, 40, 110, 24, hwnd, (HMENU)2002, nullptr, nullptr);
+        HFONT font = GetUIFont();
+        HWND label = CreateWindowW(L"STATIC", ver, WS_CHILD | WS_VISIBLE, 10, 10, 250, 20, hwnd, nullptr, nullptr, nullptr);
+        SendMessageW(label, WM_SETFONT, (WPARAM)font, TRUE);
+        HWND cookieBtn = CreateWindowW(L"BUTTON", L"Clear Cookies", WS_CHILD | WS_VISIBLE, 10, 40, 110, 24, hwnd, (HMENU)2001, nullptr, nullptr);
+        SendMessageW(cookieBtn, WM_SETFONT, (WPARAM)font, TRUE);
+        HWND cacheBtn = CreateWindowW(L"BUTTON", L"Clear Cache", WS_CHILD | WS_VISIBLE, 130, 40, 110, 24, hwnd, (HMENU)2002, nullptr, nullptr);
+        SendMessageW(cacheBtn, WM_SETFONT, (WPARAM)font, TRUE);
         return 0;
     }
     case WM_COMMAND:

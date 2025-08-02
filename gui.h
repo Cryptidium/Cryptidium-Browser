@@ -4,3 +4,4 @@
 
 int RunBrowser(HINSTANCE hInstance, int nCmdShow);
 WKContextRef GetCurrentContext();
+HFONT GetUIFont();

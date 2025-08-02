@@ -13,11 +13,17 @@
 static std::string MakeUserAgent()
 {
     std::wstring wver = BuildInfo::kVersionRaw;
-    return "Mozilla / 5.0 (Windows NT 10.0; Win64; x64) AppleWebKit / 605.1.15 (KHTML, like Gecko) Version / 26.0 Safari / 605.1.15 Cryptidium "
-           + std::string(wver.begin(), wver.end());
+    return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15 Cryptidium/" +
+           std::string(wver.begin(), wver.end());
 }
 
 static std::string gUserAgent = MakeUserAgent();
+static HFONT gUIFont;
+
+HFONT GetUIFont()
+{
+    return gUIFont;
+}
 
 struct Tab {
     WKViewRef view;
@@ -173,20 +179,30 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
     switch (msg) {
     case WM_CREATE: {
         InitCommonControls();
+        gUIFont = CreateFontW(-12, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+                              OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
+                              DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
         gTabCtrl = CreateWindowExW(0, WC_TABCONTROLW, L"", WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE,
                                    0, 0, 0, 0, hWnd, (HMENU)1000, nullptr, nullptr);
+        SendMessageW(gTabCtrl, WM_SETFONT, (WPARAM)gUIFont, TRUE);
         gNewTabBtn = CreateWindowW(L"BUTTON", L"+", WS_CHILD | WS_VISIBLE,
                                    0, 0, 0, 0, hWnd, (HMENU)1001, nullptr, nullptr);
+        SendMessageW(gNewTabBtn, WM_SETFONT, (WPARAM)gUIFont, TRUE);
         gBackBtn = CreateWindowW(L"BUTTON", L"<", WS_CHILD | WS_VISIBLE,
                                  0, 0, 0, 0, hWnd, (HMENU)1002, nullptr, nullptr);
+        SendMessageW(gBackBtn, WM_SETFONT, (WPARAM)gUIFont, TRUE);
         gForwardBtn = CreateWindowW(L"BUTTON", L">", WS_CHILD | WS_VISIBLE,
                                     0, 0, 0, 0, hWnd, (HMENU)1003, nullptr, nullptr);
+        SendMessageW(gForwardBtn, WM_SETFONT, (WPARAM)gUIFont, TRUE);
         gRefreshBtn = CreateWindowW(L"BUTTON", L"R", WS_CHILD | WS_VISIBLE,
                                     0, 0, 0, 0, hWnd, (HMENU)1004, nullptr, nullptr);
+        SendMessageW(gRefreshBtn, WM_SETFONT, (WPARAM)gUIFont, TRUE);
         gSettingsBtn = CreateWindowW(L"BUTTON", L"S", WS_CHILD | WS_VISIBLE,
                                      0, 0, 0, 0, hWnd, (HMENU)1006, nullptr, nullptr);
+        SendMessageW(gSettingsBtn, WM_SETFONT, (WPARAM)gUIFont, TRUE);
         gUrlBar = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"", WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
                                   0, 0, 0, 0, hWnd, (HMENU)1005, nullptr, nullptr);
+        SendMessageW(gUrlBar, WM_SETFONT, (WPARAM)gUIFont, TRUE);
         SetWindowSubclass(gUrlBar, UrlBarProc, 0, 0);
         AddTab(hWnd, "https://google.com");
         return 0;
@@ -228,6 +244,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         return 0;
     }
     case WM_DESTROY:
+        DeleteObject(gUIFont);
         PostQuitMessage(0);
         return 0;
     }
