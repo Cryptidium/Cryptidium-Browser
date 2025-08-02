@@ -2,8 +2,9 @@
 #include <windows.h>
 #include <WebKit/WebKit2_C.h>
 #include "buildinfo.h"
-#include <string>
-#include <algorithm>
+#include <shlwapi.h>
+
+#pragma comment(lib, "Shlwapi.lib")
 
 static WKViewRef gMainView;
 
@@ -19,13 +20,18 @@ static void LoadUI()
 {
     char exePath[MAX_PATH];
     GetModuleFileNameA(nullptr, exePath, MAX_PATH);
-    std::string path(exePath);
-    size_t pos = path.find_last_of("\\/");
-    path = path.substr(0, pos);
-    std::string url = "file:///" + path + "/index.html";
-    std::replace(url.begin(), url.end(), '\\', '/');
-    WKURLRef wkurl = WKURLCreateWithUTF8CString(url.c_str());
+    char dir[MAX_PATH];
+    lstrcpyA(dir, exePath);
+    PathRemoveFileSpecA(dir);
+    char path[MAX_PATH];
+    lstrcpyA(path, dir);
+    PathAppendA(path, "index.html");
+    char url[2048];
+    DWORD urlLen = sizeof(url);
+    UrlCreateFromPathA(path, url, &urlLen, 0);
+    WKURLRef wkurl = WKURLCreateWithUTF8CString(url);
     WKPageLoadURL(WKViewGetPage(gMainView), wkurl);
+    WKRelease(wkurl);
 }
 
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
