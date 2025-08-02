@@ -15,7 +15,7 @@
 static std::string MakeUserAgent()
 {
     std::wstring wver = BuildInfo::kVersionRaw;
-    return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/617.1.20 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/617.1.20 Cryptidium/" +
+    return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Safari/605.1.15 Cryptidium/" +
            std::string(wver.begin(), wver.end());
 }
 
