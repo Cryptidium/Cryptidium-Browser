@@ -37,6 +37,13 @@ static HWND gSettingsBtn;
 static const int TAB_HEIGHT = 24;
 static const int NAV_HEIGHT = 28;
 
+WKContextRef GetCurrentContext()
+{
+    if (gCurrentTab >= 0)
+        return WKPageGetContext(WKViewGetPage(gTabs[gCurrentTab].view));
+    return nullptr;
+}
+
 static void UpdateUrlBarFromPage(WKPageRef page)
 {
     WKURLRef url = WKPageCopyActiveURL(page);

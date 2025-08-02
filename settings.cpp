@@ -1,22 +1,20 @@
 #include "settings.h"
 #include <WebKit/WebKit2_C.h>
 #include "buildinfo.h"
+#include "gui.h"
 
 static void ClearCookies() {
     WKWebsiteDataStoreRef store = WKWebsiteDataStoreGetDefaultDataStore();
-    WKMutableArrayRef types = WKMutableArrayCreate();
-    WKArrayAppendItem(types, WKWebsiteDataTypeCookies());
-    WKWebsiteDataStoreRemoveDataOfTypes(store, types, 0, nullptr, nullptr);
-    WKRelease(types);
+    WKHTTPCookieStoreRef cookies = WKWebsiteDataStoreGetHTTPCookieStore(store);
+    WKHTTPCookieStoreDeleteAllCookies(cookies, nullptr, nullptr);
 }
 
 static void ClearCache() {
-    WKWebsiteDataStoreRef store = WKWebsiteDataStoreGetDefaultDataStore();
-    WKMutableArrayRef types = WKMutableArrayCreate();
-    WKArrayAppendItem(types, WKWebsiteDataTypeDiskCache());
-    WKArrayAppendItem(types, WKWebsiteDataTypeMemoryCache());
-    WKWebsiteDataStoreRemoveDataOfTypes(store, types, 0, nullptr, nullptr);
-    WKRelease(types);
+    WKContextRef ctx = GetCurrentContext();
+    if (!ctx)
+        return;
+    WKResourceCacheManagerRef manager = WKContextGetResourceCacheManager(ctx);
+    WKResourceCacheManagerClearCacheForAllOrigins(manager, WKResourceCachesToClearAll);
 }
 
 static LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
