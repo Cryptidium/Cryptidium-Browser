@@ -200,7 +200,7 @@ static void AddTab(HWND hWnd, const char* url)
     int img = ImageList_AddIcon(gTabImages, ph);
     DestroyIcon(ph);
     HWND closeBtn = CreateWindowW(L"BUTTON", L"x", WS_CHILD | WS_VISIBLE,
-                                  0, 0, 16, 16, gTabCtrl, nullptr, nullptr, nullptr);
+                                  0, 0, 16, 16, hWnd, nullptr, nullptr, nullptr);
     SendMessageW(closeBtn, WM_SETFONT, (WPARAM)gUIFont, TRUE);
     gTabs.push_back({ view, closeBtn, img });
     int index = static_cast<int>(gTabs.size()) - 1;
@@ -229,15 +229,18 @@ static void CloseTab(HWND hWnd, int index)
     WKRelease(view);
     gTabs.erase(gTabs.begin() + index);
     TabCtrl_DeleteItem(gTabCtrl, index);
+    if (gTabs.empty()) {
+        PostMessageW(hWnd, WM_CLOSE, 0, 0);
+        return;
+    }
     if (gCurrentTab >= index)
         gCurrentTab--;
-    if (gCurrentTab >= 0) {
-        ShowCurrentTab();
-        TabCtrl_SetCurSel(gTabCtrl, gCurrentTab);
+    ShowCurrentTab();
+    TabCtrl_SetCurSel(gTabCtrl, gCurrentTab);
+    if (gCurrentTab >= 0)
         UpdateUrlBarFromPage(WKViewGetPage(gTabs[gCurrentTab].view));
-    } else {
+    else
         SetWindowTextW(gUrlBar, L"");
-    }
     ResizeChildren(hWnd);
 }
 
