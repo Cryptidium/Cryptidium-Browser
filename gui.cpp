@@ -157,7 +157,10 @@ static void ResizeChildren(HWND hWnd)
     for (size_t i = 0; i < gTabs.size(); ++i) {
         RECT tr;
         TabCtrl_GetItemRect(gTabCtrl, i, &tr);
-        MoveWindow(gTabs[i].closeBtn, tr.right - 16, 4, 16, 16, TRUE);
+        MapWindowPoints(gTabCtrl, hWnd, (POINT*)&tr, 2);
+        MoveWindow(gTabs[i].closeBtn, tr.right - 20, tr.top + 4, 16, 16, TRUE);
+        SetWindowPos(gTabs[i].closeBtn, HWND_TOP, 0, 0, 0, 0,
+            SWP_NOMOVE | SWP_NOSIZE);
     }
 }
 
