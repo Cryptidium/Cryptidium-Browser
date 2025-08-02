@@ -5,67 +5,75 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cryptidium UI</title>
-    <!-- Load React from CDN -->
-    <script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <!-- React -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Fluent UI Web Components -->
+    <script type="module">
+        import {
+            provideFluentDesignSystem,
+            fluentTabs,
+            fluentTab,
+            fluentButton,
+            fluentTextField
+        } from "https://unpkg.com/@fluentui/web-components/dist/web-components.min.js";
+        provideFluentDesignSystem().register(
+            fluentTabs(),
+            fluentTab(),
+            fluentButton(),
+            fluentTextField()
+        );
+    </script>
     <style>
-        body, html {
+        html, body {
             margin: 0;
             padding: 0;
             height: 100%;
             overflow: hidden;
-            font-family: sans-serif;
+            font-family: 'Segoe UI', sans-serif;
         }
-        .tab-bar {
+        .window {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        .title-bar {
             display: flex;
             align-items: center;
             height: 32px;
-            background: #2e005e;
-            color: white;
-            user-select: none;
+            padding: 0 4px;
+            background-color: var(--neutral-layer-1);
+            -webkit-app-region: drag;
         }
-        .tab {
-            padding: 6px 12px;
-            margin-right: 2px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 4px 4px 0 0;
-            cursor: pointer;
+        .title-bar fluent-tabs {
+            flex: 1;
+            -webkit-app-region: no-drag;
         }
-        .tab.active {
-            background: #ffffff;
-            color: #2e005e;
+        .title-bar fluent-button {
+            -webkit-app-region: no-drag;
+            margin-left: 4px;
         }
-        .tab .close {
-            margin-left: 6px;
-            color: inherit;
-            cursor: pointer;
-        }
-        .new-tab-button {
-            margin-left: auto;
-            padding: 0 12px;
+        fluent-tab .close {
+            margin-left: 8px;
             cursor: pointer;
         }
         .nav-bar {
             display: flex;
             align-items: center;
-            height: 32px;
-            background: #ececec;
+            height: 40px;
             padding: 0 4px;
+            background: var(--neutral-layer-2);
         }
-        .nav-bar button {
+        .nav-bar fluent-button {
             margin-right: 4px;
         }
-        .nav-bar input {
+        .nav-bar fluent-text-field {
             flex: 1;
-            height: 24px;
             margin-right: 4px;
         }
         .content {
-            position: absolute;
-            top: 64px;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            flex: 1;
+            position: relative;
         }
         .content iframe {
             width: 100%;
@@ -80,9 +88,7 @@
         const { useState } = React;
 
         function BrowserApp() {
-            const [tabs, setTabs] = useState(() => {
-                return [{ id: 1, url: 'https://google.com' }];
-            });
+            const [tabs, setTabs] = useState([{ id: 1, url: 'https://google.com' }]);
             const [currentId, setCurrentId] = useState(1);
             const [urlInput, setUrlInput] = useState('https://google.com');
 
@@ -109,7 +115,7 @@
             const selectTab = (id) => {
                 setCurrentId(id);
                 const t = tabs.find(t => t.id === id);
-                setUrlInput(t.url);
+                if (t) setUrlInput(t.url);
             };
 
             const navigate = () => {
@@ -128,33 +134,37 @@
             };
 
             return (
-                React.createElement('div', { style: { height: '100%', display: 'flex', flexDirection: 'column' } },
-                    React.createElement('div', { className: 'tab-bar' },
-                        tabs.map(tab =>
-                            React.createElement('div', {
-                                key: tab.id,
-                                className: 'tab' + (tab.id === currentId ? ' active' : ''),
-                                onClick: () => selectTab(tab.id)
-                            },
-                                'Tab ', tab.id,
-                                React.createElement('span', {
-                                    className: 'close',
-                                    onClick: (e) => { e.stopPropagation(); closeTab(tab.id); }
-                                }, '×')
+                React.createElement('div', { className: 'window' },
+                    React.createElement('div', { className: 'title-bar' },
+                        React.createElement('fluent-tabs', {
+                            activeid: String(currentId),
+                            onChange: (e) => selectTab(parseInt(e.currentTarget.activeid))
+                        },
+                            tabs.map(tab =>
+                                React.createElement('fluent-tab', {
+                                    id: String(tab.id),
+                                    key: tab.id
+                                },
+                                    `Tab ${tab.id}`,
+                                    React.createElement('span', {
+                                        className: 'close',
+                                        onClick: (ev) => { ev.stopPropagation(); closeTab(tab.id); }
+                                    }, '×')
+                                )
                             )
                         ),
-                        React.createElement('div', { className: 'new-tab-button', onClick: addTab }, '+')
+                        React.createElement('fluent-button', { appearance: 'stealth', onClick: addTab }, '+')
                     ),
                     React.createElement('div', { className: 'nav-bar' },
-                        React.createElement('button', { onClick: () => { /* back placeholder */ } }, '<'),
-                        React.createElement('button', { onClick: () => { /* forward placeholder */ } }, '>'),
-                        React.createElement('button', { onClick: () => { /* refresh */ } }, 'R'),
-                        React.createElement('input', {
+                        React.createElement('fluent-button', { appearance: 'accent', onClick: () => { /* back placeholder */ } }, '<'),
+                        React.createElement('fluent-button', { appearance: 'accent', onClick: () => { /* forward placeholder */ } }, '>'),
+                        React.createElement('fluent-button', { appearance: 'accent', onClick: () => { /* refresh */ } }, '⟳'),
+                        React.createElement('fluent-text-field', {
                             value: urlInput,
-                            onChange: e => setUrlInput(e.target.value),
-                            onKeyDown
+                            onInput: (e) => setUrlInput(e.target.value),
+                            onKeyDown: onKeyDown
                         }),
-                        React.createElement('button', { onClick: navigate }, 'Go')
+                        React.createElement('fluent-button', { appearance: 'accent', onClick: navigate }, 'Go')
                     ),
                     React.createElement('div', { className: 'content' },
                         tabs.map(tab =>
