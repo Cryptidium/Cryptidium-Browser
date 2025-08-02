@@ -229,15 +229,18 @@ static void CloseTab(HWND hWnd, int index)
     WKRelease(view);
     gTabs.erase(gTabs.begin() + index);
     TabCtrl_DeleteItem(gTabCtrl, index);
+    if (gTabs.empty()) {
+        PostMessageW(hWnd, WM_CLOSE, 0, 0);
+        return;
+    }
     if (gCurrentTab >= index)
         gCurrentTab--;
-    if (gCurrentTab >= 0) {
-        ShowCurrentTab();
-        TabCtrl_SetCurSel(gTabCtrl, gCurrentTab);
+    ShowCurrentTab();
+    TabCtrl_SetCurSel(gTabCtrl, gCurrentTab);
+    if (gCurrentTab >= 0)
         UpdateUrlBarFromPage(WKViewGetPage(gTabs[gCurrentTab].view));
-    } else {
+    else
         SetWindowTextW(gUrlBar, L"");
-    }
     ResizeChildren(hWnd);
 }
 
