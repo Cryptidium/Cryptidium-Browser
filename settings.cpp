@@ -1,5 +1,8 @@
 #include "settings.h"
 #include <WebKit/WebKit2_C.h>
+#include <WebKit/WKWebsiteDataStoreRef.h>
+#include <WebKit/WKHTTPCookieStoreRef.h>
+#include <WebKit/WKResourceCacheManager.h>
 #include "buildinfo.h"
 #include "gui.h"
 
