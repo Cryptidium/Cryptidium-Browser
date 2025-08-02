@@ -200,7 +200,7 @@ static void AddTab(HWND hWnd, const char* url)
     int img = ImageList_AddIcon(gTabImages, ph);
     DestroyIcon(ph);
     HWND closeBtn = CreateWindowW(L"BUTTON", L"x", WS_CHILD | WS_VISIBLE,
-                                  0, 0, 16, 16, gTabCtrl, nullptr, nullptr, nullptr);
+                                  0, 0, 16, 16, hWnd, nullptr, nullptr, nullptr);
     SendMessageW(closeBtn, WM_SETFONT, (WPARAM)gUIFont, TRUE);
     gTabs.push_back({ view, closeBtn, img });
     int index = static_cast<int>(gTabs.size()) - 1;
