@@ -8,6 +8,7 @@
 #include <string>
 #include "buildinfo.h"
 #include "settings.h"
+#include "resource.h"
 
 #pragma comment(lib, "Comctl32.lib")
 #pragma comment(lib, "Urlmon.lib")
@@ -360,7 +361,19 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
             else if (button == XBUTTON2)
                 WKPageGoForward(WKViewGetPage(gTabs[gCurrentTab].view));
         }
-        return TRUE;
+        return 0;
+    case WM_APPCOMMAND:
+        if (gCurrentTab >= 0) {
+            switch (GET_APPCOMMAND_LPARAM(lParam)) {
+            case APPCOMMAND_BROWSER_BACKWARD:
+                WKPageGoBack(WKViewGetPage(gTabs[gCurrentTab].view));
+                return 0;
+            case APPCOMMAND_BROWSER_FORWARD:
+                WKPageGoForward(WKViewGetPage(gTabs[gCurrentTab].view));
+                return 0;
+            }
+        }
+        break;
     case WM_NOTIFY: {
         LPNMHDR nm = (LPNMHDR)lParam;
         if (nm->hwndFrom == gTabCtrl && nm->code == TCN_SELCHANGE) {
@@ -391,8 +404,7 @@ int RunBrowser(HINSTANCE hInst, int nCmdShow, const char* initialUrl)
     wc.hInstance = hInst;
     wc.lpszClassName = L"CryptidiumBrowser";
     wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-    HICON icon = (HICON)LoadImageW(nullptr, L"assets\\app.ico", IMAGE_ICON,
-                                   0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
+    HICON icon = LoadIconW(hInst, MAKEINTRESOURCE(IDI_APP_ICON));
     wc.hIcon = icon;
     wc.hIconSm = icon;
     RegisterClassExW(&wc);
@@ -400,6 +412,8 @@ int RunBrowser(HINSTANCE hInst, int nCmdShow, const char* initialUrl)
                              CW_USEDEFAULT, CW_USEDEFAULT, 1024, 768,
                              nullptr, nullptr, hInst, nullptr);
     ShowWindow(win, nCmdShow);
+    SendMessageW(win, WM_SETICON, ICON_BIG, (LPARAM)icon);
+    SendMessageW(win, WM_SETICON, ICON_SMALL, (LPARAM)icon);
     UpdateWindow(win);
     MSG m;
     while (GetMessageW(&m, nullptr, 0, 0)) {

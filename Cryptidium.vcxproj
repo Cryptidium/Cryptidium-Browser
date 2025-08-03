@@ -82,7 +82,9 @@
     <ClInclude Include="buildinfo.h" />
     <ClInclude Include="gui.h" />
     <ClInclude Include="settings.h" />
+    <ClInclude Include="resource.h" />
     <None Include="assets\app.ico" />
+    <ResourceCompile Include="resources.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
