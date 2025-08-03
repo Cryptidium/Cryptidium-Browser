@@ -352,7 +352,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         }
         return 0;
     }
-    case WM_XBUTTONUP:
+    case WM_XBUTTONDOWN:
         if (gCurrentTab >= 0) {
             WORD button = GET_XBUTTON_WPARAM(wParam);
             if (button == XBUTTON1)
@@ -360,7 +360,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
             else if (button == XBUTTON2)
                 WKPageGoForward(WKViewGetPage(gTabs[gCurrentTab].view));
         }
-        return 0;
+        return TRUE;
     case WM_NOTIFY: {
         LPNMHDR nm = (LPNMHDR)lParam;
         if (nm->hwndFrom == gTabCtrl && nm->code == TCN_SELCHANGE) {
