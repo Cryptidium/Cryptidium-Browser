@@ -192,7 +192,15 @@ static void AddTab(HWND hWnd, const char* url)
     WKRelease(ua);
     static WKPageNavigationClientV0 navClient;
     navClient.base.version = 0;
+    navClient.didCommitNavigation = [](WKPageRef p, WKNavigationRef, WKTypeRef, const void*) {
+        UpdateUrlBarFromPage(p);
+        UpdateTabFromPage(p);
+    };
     navClient.didFinishNavigation = [](WKPageRef p, WKNavigationRef, WKTypeRef, const void*) {
+        UpdateUrlBarFromPage(p);
+        UpdateTabFromPage(p);
+    };
+    navClient.didSameDocumentNavigation = [](WKPageRef p, WKNavigationRef, WKSameDocumentNavigationType, WKTypeRef, const void*) {
         UpdateUrlBarFromPage(p);
         UpdateTabFromPage(p);
     };
