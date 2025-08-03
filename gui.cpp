@@ -21,6 +21,7 @@ static std::string MakeUserAgent()
 
 static std::string gUserAgent = MakeUserAgent();
 static HFONT gUIFont;
+static std::string gStartupUrl = "https://google.com";
 
 HFONT GetUIFont()
 {
@@ -314,7 +315,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
                                   0, 0, 0, 0, hWnd, (HMENU)1005, nullptr, nullptr);
         SendMessageW(gUrlBar, WM_SETFONT, (WPARAM)gUIFont, TRUE);
         SetWindowSubclass(gUrlBar, UrlBarProc, 0, 0);
-        AddTab(hWnd, "https://google.com");
+        AddTab(hWnd, gStartupUrl.c_str());
         return 0;
     }
     case WM_SIZE:
@@ -351,6 +352,15 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         }
         return 0;
     }
+    case WM_XBUTTONUP:
+        if (gCurrentTab >= 0) {
+            WORD button = GET_XBUTTON_WPARAM(wParam);
+            if (button == XBUTTON1)
+                WKPageGoBack(WKViewGetPage(gTabs[gCurrentTab].view));
+            else if (button == XBUTTON2)
+                WKPageGoForward(WKViewGetPage(gTabs[gCurrentTab].view));
+        }
+        return 0;
     case WM_NOTIFY: {
         LPNMHDR nm = (LPNMHDR)lParam;
         if (nm->hwndFrom == gTabCtrl && nm->code == TCN_SELCHANGE) {
@@ -370,8 +380,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-int RunBrowser(HINSTANCE hInst, int nCmdShow)
+int RunBrowser(HINSTANCE hInst, int nCmdShow, const char* initialUrl)
 {
+    if (initialUrl)
+        gStartupUrl = initialUrl;
     BuildInfo::ProcessUpdates();
     WNDCLASSEXW wc{};
     wc.cbSize = sizeof(wc);
