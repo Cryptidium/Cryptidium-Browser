@@ -48,6 +48,8 @@ static HIMAGELIST gTabImages;
 static const int TAB_HEIGHT = 24;
 static const int NAV_HEIGHT = 28;
 
+static bool gTabWidthAdjusted = false;
+
 WKContextRef GetCurrentContext()
 {
     if (gCurrentTab >= 0)
@@ -158,7 +160,7 @@ static void ResizeChildren(HWND hWnd)
         RECT tr;
         TabCtrl_GetItemRect(gTabCtrl, i, &tr);
         MapWindowPoints(gTabCtrl, hWnd, (POINT*)&tr, 2);
-        MoveWindow(gTabs[i].closeBtn, tr.right - 20, tr.top + 4, 16, 16, TRUE);
+        MoveWindow(gTabs[i].closeBtn, tr.right - 5, tr.top + 4, 16, 16, TRUE);
         SetWindowPos(gTabs[i].closeBtn, HWND_TOP, 0, 0, 0, 0,
             SWP_NOMOVE | SWP_NOSIZE);
     }
@@ -209,6 +211,12 @@ static void AddTab(HWND hWnd, const char* url)
     tie.iImage = img;
     tie.pszText = const_cast<wchar_t*>(L"Loading");
     TabCtrl_InsertItem(gTabCtrl, index, &tie);
+    if (!gTabWidthAdjusted) {
+        RECT tr;
+        TabCtrl_GetItemRect(gTabCtrl, index, &tr);
+        TabCtrl_SetMinTabWidth(gTabCtrl, (tr.right - tr.left) + 15);
+        gTabWidthAdjusted = true;
+    }
     gCurrentTab = index;
     ShowCurrentTab();
     if (url) {
@@ -229,15 +237,18 @@ static void CloseTab(HWND hWnd, int index)
     WKRelease(view);
     gTabs.erase(gTabs.begin() + index);
     TabCtrl_DeleteItem(gTabCtrl, index);
+    if (gTabs.empty()) {
+        PostMessageW(hWnd, WM_CLOSE, 0, 0);
+        return;
+    }
     if (gCurrentTab >= index)
         gCurrentTab--;
-    if (gCurrentTab >= 0) {
-        ShowCurrentTab();
-        TabCtrl_SetCurSel(gTabCtrl, gCurrentTab);
+    ShowCurrentTab();
+    TabCtrl_SetCurSel(gTabCtrl, gCurrentTab);
+    if (gCurrentTab >= 0)
         UpdateUrlBarFromPage(WKViewGetPage(gTabs[gCurrentTab].view));
-    } else {
+    else
         SetWindowTextW(gUrlBar, L"");
-    }
     ResizeChildren(hWnd);
 }
 
