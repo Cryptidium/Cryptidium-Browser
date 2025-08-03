@@ -12,14 +12,17 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, PWSTR, int nCmdShow) {
         std::wstring arg = argv[1];
         if (arg.rfind(L"https://", 0) == 0) {
             int len = WideCharToMultiByte(CP_UTF8, 0, arg.c_str(), -1, nullptr, 0, nullptr, nullptr);
-            url.resize(len - 1);
-            WideCharToMultiByte(CP_UTF8, 0, arg.c_str(), -1, url.data(), len, nullptr, nullptr);
+            std::string buf(len, '\0');
+            WideCharToMultiByte(CP_UTF8, 0, arg.c_str(), -1, buf.data(), len, nullptr, nullptr);
+            buf.resize(len - 1);
+            url = std::move(buf);
         } else {
             wchar_t full[MAX_PATH];
             if (GetFullPathNameW(arg.c_str(), MAX_PATH, full, nullptr)) {
                 int len = WideCharToMultiByte(CP_UTF8, 0, full, -1, nullptr, 0, nullptr, nullptr);
-                std::string tmp(len - 1);
+                std::string tmp(len, '\0');
                 WideCharToMultiByte(CP_UTF8, 0, full, -1, tmp.data(), len, nullptr, nullptr);
+                tmp.resize(len - 1);
                 for (char& c : tmp)
                     if (c == '\\')
                         c = '/';
