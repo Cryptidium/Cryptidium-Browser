@@ -3,6 +3,8 @@
 #include <windowsx.h>
 #include <commctrl.h>
 #include <urlmon.h>
+#include <shlobj.h>
+#include <commdlg.h>
 #include <vector>
 #include <WebKit/WebKit2_C.h>
 #include <string>
@@ -12,6 +14,7 @@
 
 #pragma comment(lib, "Comctl32.lib")
 #pragma comment(lib, "Urlmon.lib")
+#pragma comment(lib, "Shell32.lib")
 
 static std::string MakeUserAgent()
 {
@@ -168,6 +171,30 @@ static void ResizeChildren(HWND hWnd)
     }
 }
 
+static std::wstring AskSaveLocation(HWND parent, const wchar_t* suggestedName) {
+    OPENFILENAMEW ofn{};
+    wchar_t fileName[MAX_PATH] = L"";
+    
+    if (suggestedName) {
+        wcsncpy_s(fileName, suggestedName, MAX_PATH - 1);
+    }
+    
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = parent;
+    ofn.lpstrFile = fileName;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.lpstrFilter = L"All Files\0*.*\0";
+    ofn.nFilterIndex = 1;
+    ofn.lpstrTitle = L"Save Download As";
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
+    
+    if (GetSaveFileNameW(&ofn)) {
+        return fileName;
+    }
+    
+    return L"";
+}
+
 static void NavigateCurrent(const char* url)
 {
     if (gCurrentTab < 0)
@@ -205,6 +232,70 @@ static void AddTab(HWND hWnd, const char* url)
         UpdateTabFromPage(p);
     };
     WKPageSetPageNavigationClient(page, &navClient.base);
+    
+    // Set up download client
+    static WKContextDownloadClientV0 downloadClient;
+    downloadClient.base.version = 0;
+    downloadClient.base.clientInfo = hWnd;
+    
+    downloadClient.didCreateDestination = [](WKContextRef, WKDownloadRef download, WKStringRef path, const void* clientInfo) {
+        // Called when download file is created
+    };
+    
+    downloadClient.decideDestinationWithSuggestedFilename = [](WKContextRef, WKDownloadRef download, WKStringRef filename, bool* allowOverwrite, const void* clientInfo) -> WKStringRef {
+        HWND parent = (HWND)clientInfo;
+        
+        // Get suggested filename
+        size_t maxSize = WKStringGetMaximumUTF8CStringSize(filename);
+        std::string utf8Name(maxSize, '\0');
+        WKStringGetUTF8CString(filename, utf8Name.data(), maxSize);
+        utf8Name = utf8Name.c_str(); // Trim to actual size
+        std::wstring wSuggestedName(utf8Name.begin(), utf8Name.end());
+        
+        std::wstring destinationPath;
+        
+        if (GetAskDownloadLocation()) {
+            // Ask user where to save
+            destinationPath = AskSaveLocation(parent, wSuggestedName.c_str());
+            if (destinationPath.empty()) {
+                // User cancelled
+                return nullptr;
+            }
+        } else {
+            // Use predefined location
+            std::wstring downloadFolder = GetDownloadPath();
+            
+            // Create download folder if it doesn't exist
+            CreateDirectoryW(downloadFolder.c_str(), nullptr);
+            
+            destinationPath = downloadFolder + L"\\" + wSuggestedName;
+        }
+        
+        *allowOverwrite = true;
+        
+        // Convert back to UTF8 for WebKit
+        int utf8Len = WideCharToMultiByte(CP_UTF8, 0, destinationPath.c_str(), -1, nullptr, 0, nullptr, nullptr);
+        std::string utf8Path(utf8Len, '\0');
+        WideCharToMultiByte(CP_UTF8, 0, destinationPath.c_str(), -1, utf8Path.data(), utf8Len, nullptr, nullptr);
+        utf8Path = utf8Path.c_str();
+        
+        return WKStringCreateWithUTF8CString(utf8Path.c_str());
+    };
+    
+    downloadClient.didStart = [](WKContextRef, WKDownloadRef download, const void*) {
+        // Download started - could show notification or progress UI
+    };
+    
+    downloadClient.didFinish = [](WKContextRef, WKDownloadRef download, const void*) {
+        // Download completed - could show notification
+    };
+    
+    downloadClient.didFail = [](WKContextRef, WKDownloadRef download, WKErrorRef error, const void*) {
+        // Download failed - could show error message
+    };
+    
+    WKContextSetDownloadClient(ctx, &downloadClient.base);
+    
     HWND child = WKViewGetWindow(view);
     ShowWindow(child, SW_HIDE);
     WKViewSetIsInWindow(view, true);
