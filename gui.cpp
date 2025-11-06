@@ -73,11 +73,12 @@ static const int NAV_HEIGHT = 28;
 
 static bool gTabWidthAdjusted = false;
 
+// Shared WebKit context for all tabs - groups all WebKit processes under Cryptidium
+static WKContextRef gSharedContext = nullptr;
+
 WKContextRef GetCurrentContext()
 {
-    if (gCurrentTab >= 0)
-        return WKPageGetContext(WKViewGetPage(gTabs[gCurrentTab].view));
-    return nullptr;
+    return gSharedContext;
 }
 
 static void UpdateUrlBarFromPage(WKPageRef page)
@@ -221,37 +222,15 @@ static void NavigateCurrent(const char* url)
     WKPageLoadURL(WKViewGetPage(gTabs[gCurrentTab].view), wkurl);
 }
 
-static void AddTab(HWND hWnd, const char* url)
+static void InitializeSharedContext(HWND hWnd)
 {
-    RECT rc;
-    GetClientRect(hWnd, &rc);
-    int top = TAB_HEIGHT + NAV_HEIGHT;
-    RECT webRect{ 0, top, rc.right, rc.bottom };
-    WKPageConfigurationRef cfg = WKPageConfigurationCreate();
-    WKContextRef ctx = WKContextCreateWithConfiguration(nullptr);
-    WKPageConfigurationSetContext(cfg, ctx);
-    WKViewRef view = WKViewCreate(webRect, cfg, hWnd);
-    WKPageRef page = WKViewGetPage(view);
-    WKStringRef ua = WKStringCreateWithUTF8CString(gUserAgent.c_str());
-    WKPageSetCustomUserAgent(page, ua);
-    WKRelease(ua);
-    static WKPageNavigationClientV0 navClient;
-    navClient.base.version = 0;
-    navClient.didCommitNavigation = [](WKPageRef p, WKNavigationRef, WKTypeRef, const void*) {
-        UpdateUrlBarFromPage(p);
-        UpdateTabFromPage(p);
-    };
-    navClient.didFinishNavigation = [](WKPageRef p, WKNavigationRef, WKTypeRef, const void*) {
-        UpdateUrlBarFromPage(p);
-        UpdateTabFromPage(p);
-    };
-    navClient.didSameDocumentNavigation = [](WKPageRef p, WKNavigationRef, WKSameDocumentNavigationType, WKTypeRef, const void*) {
-        UpdateUrlBarFromPage(p);
-        UpdateTabFromPage(p);
-    };
-    WKPageSetPageNavigationClient(page, &navClient.base);
+    if (gSharedContext)
+        return;
     
-    // Set up download client
+    // Create shared context - all tabs will use this, grouping WebKit processes
+    gSharedContext = WKContextCreateWithConfiguration(nullptr);
+    
+    // Set up download client once for the shared context
     static WKContextDownloadClientV0 downloadClient;
     downloadClient.base.version = 0;
     downloadClient.base.clientInfo = hWnd;
@@ -318,7 +297,44 @@ static void AddTab(HWND hWnd, const char* url)
         // Download failed - could show error message
     };
     
-    WKContextSetDownloadClient(ctx, &downloadClient.base);
+    WKContextSetDownloadClient(gSharedContext, &downloadClient.base);
+}
+
+static void AddTab(HWND hWnd, const char* url)
+{
+    // Initialize shared context on first tab creation
+    InitializeSharedContext(hWnd);
+    
+    RECT rc;
+    GetClientRect(hWnd, &rc);
+    int top = TAB_HEIGHT + NAV_HEIGHT;
+    RECT webRect{ 0, top, rc.right, rc.bottom };
+    WKPageConfigurationRef cfg = WKPageConfigurationCreate();
+    
+    // Use the shared context for all tabs - groups WebKit processes together
+    WKPageConfigurationSetContext(cfg, gSharedContext);
+    
+    WKViewRef view = WKViewCreate(webRect, cfg, hWnd);
+    WKPageRef page = WKViewGetPage(view);
+    WKStringRef ua = WKStringCreateWithUTF8CString(gUserAgent.c_str());
+    WKPageSetCustomUserAgent(page, ua);
+    WKRelease(ua);
+    
+    static WKPageNavigationClientV0 navClient;
+    navClient.base.version = 0;
+    navClient.didCommitNavigation = [](WKPageRef p, WKNavigationRef, WKTypeRef, const void*) {
+        UpdateUrlBarFromPage(p);
+        UpdateTabFromPage(p);
+    };
+    navClient.didFinishNavigation = [](WKPageRef p, WKNavigationRef, WKTypeRef, const void*) {
+        UpdateUrlBarFromPage(p);
+        UpdateTabFromPage(p);
+    };
+    navClient.didSameDocumentNavigation = [](WKPageRef p, WKNavigationRef, WKSameDocumentNavigationType, WKTypeRef, const void*) {
+        UpdateUrlBarFromPage(p);
+        UpdateTabFromPage(p);
+    };
+    WKPageSetPageNavigationClient(page, &navClient.base);
     
     HWND child = WKViewGetWindow(view);
     ShowWindow(child, SW_HIDE);
@@ -508,6 +524,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         return 0;
     }
     case WM_DESTROY:
+        if (gSharedContext) {
+            WKRelease(gSharedContext);
+            gSharedContext = nullptr;
+        }
         ImageList_Destroy(gTabImages);
         DeleteObject(gUIFont);
         PostQuitMessage(0);
