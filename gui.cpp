@@ -36,6 +36,15 @@ static std::string WideToUTF8(const std::wstring& wstr) {
     return result;
 }
 
+static std::wstring UTF8ToWide(const std::string& str) {
+    if (str.empty()) return L"";
+    int wideLen = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, nullptr, 0);
+    if (wideLen <= 0) return L"";
+    std::wstring result(wideLen - 1, L'\0');  // -1 to exclude null terminator
+    MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, result.data(), wideLen);
+    return result;
+}
+
 HFONT GetUIFont()
 {
     return gUIFont;
@@ -261,7 +270,7 @@ static void AddTab(HWND hWnd, const char* url)
         if (actualSize > 0) {
             utf8Name.resize(actualSize - 1); // -1 to remove null terminator
         }
-        std::wstring wSuggestedName(utf8Name.begin(), utf8Name.end());
+        std::wstring wSuggestedName = UTF8ToWide(utf8Name);
         
         std::wstring destinationPath;
         
@@ -277,7 +286,14 @@ static void AddTab(HWND hWnd, const char* url)
             std::wstring downloadFolder = GetDownloadPath();
             
             // Create download folder if it doesn't exist
-            CreateDirectoryW(downloadFolder.c_str(), nullptr);
+            if (!CreateDirectoryW(downloadFolder.c_str(), nullptr)) {
+                // Check if the directory already exists
+                DWORD error = GetLastError();
+                if (error != ERROR_ALREADY_EXISTS) {
+                    // Failed to create directory and it doesn't exist
+                    return nullptr;
+                }
+            }
             
             destinationPath = downloadFolder + L"\\" + wSuggestedName;
         }
