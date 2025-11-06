@@ -27,6 +27,15 @@ static std::string gUserAgent = MakeUserAgent();
 static HFONT gUIFont;
 static std::string gStartupUrl = "https://google.com";
 
+static std::string WideToUTF8(const std::wstring& wstr) {
+    if (wstr.empty()) return "";
+    int utf8Len = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, nullptr, 0, nullptr, nullptr);
+    if (utf8Len <= 0) return "";
+    std::string result(utf8Len - 1, '\0');  // -1 to exclude null terminator
+    WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, result.data(), utf8Len, nullptr, nullptr);
+    return result;
+}
+
 HFONT GetUIFont()
 {
     return gUIFont;
@@ -248,8 +257,10 @@ static void AddTab(HWND hWnd, const char* url)
         // Get suggested filename
         size_t maxSize = WKStringGetMaximumUTF8CStringSize(filename);
         std::string utf8Name(maxSize, '\0');
-        WKStringGetUTF8CString(filename, utf8Name.data(), maxSize);
-        utf8Name = utf8Name.c_str(); // Trim to actual size
+        size_t actualSize = WKStringGetUTF8CString(filename, utf8Name.data(), maxSize);
+        if (actualSize > 0) {
+            utf8Name.resize(actualSize - 1); // -1 to remove null terminator
+        }
         std::wstring wSuggestedName(utf8Name.begin(), utf8Name.end());
         
         std::wstring destinationPath;
@@ -274,10 +285,7 @@ static void AddTab(HWND hWnd, const char* url)
         *allowOverwrite = true;
         
         // Convert back to UTF8 for WebKit
-        int utf8Len = WideCharToMultiByte(CP_UTF8, 0, destinationPath.c_str(), -1, nullptr, 0, nullptr, nullptr);
-        std::string utf8Path(utf8Len, '\0');
-        WideCharToMultiByte(CP_UTF8, 0, destinationPath.c_str(), -1, utf8Path.data(), utf8Len, nullptr, nullptr);
-        utf8Path = utf8Path.c_str();
+        std::string utf8Path = WideToUTF8(destinationPath);
         
         return WKStringCreateWithUTF8CString(utf8Path.c_str());
     };

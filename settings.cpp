@@ -33,9 +33,10 @@ std::wstring GetDownloadPath() {
     
     // Default to Downloads folder if not set
     if (result.empty()) {
-        wchar_t path[MAX_PATH];
-        if (SUCCEEDED(SHGetFolderPathW(nullptr, CSIDL_PROFILE, nullptr, 0, path))) {
-            result = std::wstring(path) + L"\\Downloads";
+        PWSTR path = nullptr;
+        if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Downloads, 0, nullptr, &path))) {
+            result = path;
+            CoTaskMemFree(path);
         }
     }
     
