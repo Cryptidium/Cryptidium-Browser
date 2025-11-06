@@ -30,7 +30,7 @@ static bool IsWindowsVersionSupported() {
         return false;
     
     // Check if build is 23H2 (22631) or newer
-    // 23H2: 22631, 24H2: 26100, 25H2: 27000+
+    // Supported: 23H2 (22631), 24H2 (26100), 25H2 (future), etc.
     if (osvi.dwBuildNumber < 22631)
         return false;
     
