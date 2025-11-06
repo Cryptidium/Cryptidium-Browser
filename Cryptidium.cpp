@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <winternl.h>
 #include <shellapi.h>
 #include <string>
 #include "gui.h"
@@ -17,7 +18,8 @@ static bool IsWindowsVersionSupported() {
     RTL_OSVERSIONINFOW osvi{};
     osvi.dwOSVersionInfoSize = sizeof(osvi);
     
-    if (RtlGetVersion(&osvi) != 0)
+    NTSTATUS status = RtlGetVersion(&osvi);
+    if (!NT_SUCCESS(status))
         return false;
     
     // Check if Windows 11 (version 10.0 with build >= 22000)
