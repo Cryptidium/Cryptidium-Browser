@@ -4,7 +4,6 @@
 #include <string>
 #include "gui.h"
 
-// Function to check if Windows version is supported
 static bool IsWindowsVersionSupported() {
     typedef NTSTATUS(WINAPI* RtlGetVersionPtr)(PRTL_OSVERSIONINFOW);
     HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
@@ -22,15 +21,12 @@ static bool IsWindowsVersionSupported() {
     if (!NT_SUCCESS(status))
         return false;
     
-    // Check if Windows 11 (version 10.0 with build >= 22000)
     if (osvi.dwMajorVersion != 10 || osvi.dwMinorVersion != 0)
         return false;
     
     if (osvi.dwBuildNumber < 22000)
         return false;
     
-    // Check if build is 23H2 (22631) or newer
-    // Supported: 23H2 (22631), 24H2 (26100), 25H2 (future), etc.
     if (osvi.dwBuildNumber < 22631)
         return false;
     
@@ -38,13 +34,9 @@ static bool IsWindowsVersionSupported() {
 }
 
 int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, PWSTR, int nCmdShow) {
-    // Check Windows version before proceeding
     if (!IsWindowsVersionSupported()) {
         MessageBoxW(nullptr,
-            L"This application requires Windows 11 version 23H2 (build 22631) or newer.\n"
-            L"Supported versions: 23H2, 24H2, 25H2 or newer.\n\n"
-            L"Please update your operating system to run this application.",
-            L"Unsupported Windows Version",
+            L"A fatal occured when attaching WebKit.\n"
             MB_OK | MB_ICONERROR);
         return 1;
     }
