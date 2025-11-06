@@ -3,6 +3,8 @@
 #include <windowsx.h>
 #include <commctrl.h>
 #include <urlmon.h>
+#include <shlobj.h>
+#include <commdlg.h>
 #include <vector>
 #include <WebKit/WebKit2_C.h>
 #include <string>
@@ -12,6 +14,7 @@
 
 #pragma comment(lib, "Comctl32.lib")
 #pragma comment(lib, "Urlmon.lib")
+#pragma comment(lib, "Shell32.lib")
 
 static std::string MakeUserAgent()
 {
@@ -23,6 +26,24 @@ static std::string MakeUserAgent()
 static std::string gUserAgent = MakeUserAgent();
 static HFONT gUIFont;
 static std::string gStartupUrl = "https://google.com";
+
+static std::string WideToUTF8(const std::wstring& wstr) {
+    if (wstr.empty()) return "";
+    int utf8Len = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, nullptr, 0, nullptr, nullptr);
+    if (utf8Len <= 0) return "";
+    std::string result(utf8Len - 1, '\0');  // -1 to exclude null terminator
+    WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, result.data(), utf8Len, nullptr, nullptr);
+    return result;
+}
+
+static std::wstring UTF8ToWide(const std::string& str) {
+    if (str.empty()) return L"";
+    int wideLen = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, nullptr, 0);
+    if (wideLen <= 0) return L"";
+    std::wstring result(wideLen - 1, L'\0');  // -1 to exclude null terminator
+    MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, result.data(), wideLen);
+    return result;
+}
 
 HFONT GetUIFont()
 {
@@ -52,11 +73,12 @@ static const int NAV_HEIGHT = 28;
 
 static bool gTabWidthAdjusted = false;
 
+// Shared WebKit context for all tabs - groups all WebKit processes under Cryptidium
+static WKContextRef gSharedContext = nullptr;
+
 WKContextRef GetCurrentContext()
 {
-    if (gCurrentTab >= 0)
-        return WKPageGetContext(WKViewGetPage(gTabs[gCurrentTab].view));
-    return nullptr;
+    return gSharedContext;
 }
 
 static void UpdateUrlBarFromPage(WKPageRef page)
@@ -168,6 +190,30 @@ static void ResizeChildren(HWND hWnd)
     }
 }
 
+static std::wstring AskSaveLocation(HWND parent, const wchar_t* suggestedName) {
+    OPENFILENAMEW ofn{};
+    wchar_t fileName[MAX_PATH] = L"";
+    
+    if (suggestedName) {
+        wcsncpy_s(fileName, suggestedName, MAX_PATH - 1);
+    }
+    
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = parent;
+    ofn.lpstrFile = fileName;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.lpstrFilter = L"All Files\0*.*\0";
+    ofn.nFilterIndex = 1;
+    ofn.lpstrTitle = L"Save Download As";
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
+    
+    if (GetSaveFileNameW(&ofn)) {
+        return fileName;
+    }
+    
+    return L"";
+}
+
 static void NavigateCurrent(const char* url)
 {
     if (gCurrentTab < 0)
@@ -176,20 +222,104 @@ static void NavigateCurrent(const char* url)
     WKPageLoadURL(WKViewGetPage(gTabs[gCurrentTab].view), wkurl);
 }
 
+static void InitializeSharedContext(HWND hWnd)
+{
+    if (gSharedContext)
+        return;
+    
+    // Create shared context - all tabs will use this, grouping WebKit processes
+    gSharedContext = WKContextCreateWithConfiguration(nullptr);
+    
+    // Set up download client once for the shared context
+    static WKContextDownloadClientV0 downloadClient;
+    downloadClient.base.version = 0;
+    downloadClient.base.clientInfo = hWnd;
+    
+    downloadClient.didCreateDestination = [](WKContextRef, WKDownloadRef download, WKStringRef path, const void* clientInfo) {
+        // Called when download file is created
+    };
+    
+    downloadClient.decideDestinationWithSuggestedFilename = [](WKContextRef, WKDownloadRef download, WKStringRef filename, bool* allowOverwrite, const void* clientInfo) -> WKStringRef {
+        HWND parent = (HWND)clientInfo;
+        
+        // Get suggested filename
+        size_t maxSize = WKStringGetMaximumUTF8CStringSize(filename);
+        std::string utf8Name(maxSize, '\0');
+        size_t actualSize = WKStringGetUTF8CString(filename, utf8Name.data(), maxSize);
+        if (actualSize > 0) {
+            utf8Name.resize(actualSize - 1); // -1 to remove null terminator
+        }
+        std::wstring wSuggestedName = UTF8ToWide(utf8Name);
+        
+        std::wstring destinationPath;
+        
+        if (GetAskDownloadLocation()) {
+            // Ask user where to save
+            destinationPath = AskSaveLocation(parent, wSuggestedName.c_str());
+            if (destinationPath.empty()) {
+                // User cancelled
+                return nullptr;
+            }
+        } else {
+            // Use predefined location
+            std::wstring downloadFolder = GetDownloadPath();
+            
+            // Create download folder if it doesn't exist
+            if (!CreateDirectoryW(downloadFolder.c_str(), nullptr)) {
+                // Check if the directory already exists
+                DWORD error = GetLastError();
+                if (error != ERROR_ALREADY_EXISTS) {
+                    // Failed to create directory and it doesn't exist
+                    return nullptr;
+                }
+            }
+            
+            destinationPath = downloadFolder + L"\\" + wSuggestedName;
+        }
+        
+        *allowOverwrite = true;
+        
+        // Convert back to UTF8 for WebKit
+        std::string utf8Path = WideToUTF8(destinationPath);
+        
+        return WKStringCreateWithUTF8CString(utf8Path.c_str());
+    };
+    
+    downloadClient.didStart = [](WKContextRef, WKDownloadRef download, const void*) {
+        // Download started - could show notification or progress UI
+    };
+    
+    downloadClient.didFinish = [](WKContextRef, WKDownloadRef download, const void*) {
+        // Download completed - could show notification
+    };
+    
+    downloadClient.didFail = [](WKContextRef, WKDownloadRef download, WKErrorRef error, const void*) {
+        // Download failed - could show error message
+    };
+    
+    WKContextSetDownloadClient(gSharedContext, &downloadClient.base);
+}
+
 static void AddTab(HWND hWnd, const char* url)
 {
+    // Initialize shared context on first tab creation
+    InitializeSharedContext(hWnd);
+    
     RECT rc;
     GetClientRect(hWnd, &rc);
     int top = TAB_HEIGHT + NAV_HEIGHT;
     RECT webRect{ 0, top, rc.right, rc.bottom };
     WKPageConfigurationRef cfg = WKPageConfigurationCreate();
-    WKContextRef ctx = WKContextCreateWithConfiguration(nullptr);
-    WKPageConfigurationSetContext(cfg, ctx);
+    
+    // Use the shared context for all tabs - groups WebKit processes together
+    WKPageConfigurationSetContext(cfg, gSharedContext);
+    
     WKViewRef view = WKViewCreate(webRect, cfg, hWnd);
     WKPageRef page = WKViewGetPage(view);
     WKStringRef ua = WKStringCreateWithUTF8CString(gUserAgent.c_str());
     WKPageSetCustomUserAgent(page, ua);
     WKRelease(ua);
+    
     static WKPageNavigationClientV0 navClient;
     navClient.base.version = 0;
     navClient.didCommitNavigation = [](WKPageRef p, WKNavigationRef, WKTypeRef, const void*) {
@@ -205,6 +335,7 @@ static void AddTab(HWND hWnd, const char* url)
         UpdateTabFromPage(p);
     };
     WKPageSetPageNavigationClient(page, &navClient.base);
+    
     HWND child = WKViewGetWindow(view);
     ShowWindow(child, SW_HIDE);
     WKViewSetIsInWindow(view, true);
@@ -393,6 +524,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         return 0;
     }
     case WM_DESTROY:
+        if (gSharedContext) {
+            WKRelease(gSharedContext);
+            gSharedContext = nullptr;
+        }
         ImageList_Destroy(gTabImages);
         DeleteObject(gUIFont);
         PostQuitMessage(0);
