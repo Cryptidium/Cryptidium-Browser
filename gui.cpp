@@ -226,17 +226,20 @@ static void InitializeSharedContext(HWND hWnd)
 {
     if (gSharedContext)
         return;
-    
-    // Create shared context - all tabs will use this, grouping WebKit processes
+
     gSharedContext = WKContextCreateWithConfiguration(nullptr);
-    
-    // Set up download client once for the shared context
+   
+    WKContextSetMaximumNumberOfProcesses(gSharedContext, 1);
+
     static WKContextDownloadClientV0 downloadClient;
     downloadClient.base.version = 0;
     downloadClient.base.clientInfo = hWnd;
     
-    downloadClient.didCreateDestination = [](WKContextRef, WKDownloadRef download, WKStringRef path, const void* clientInfo) {
-        // Called when download file is created
+    downloadClient.didStart = [](WKContextRef, WKDownloadRef download, const void* clientInfo) {
+        if (gCurrentTab >= 0) {
+            WKPageRef page = WKViewGetPage(gTabs[gCurrentTab].view);
+            WKPageGoBack(page);
+        }
     };
     
     downloadClient.decideDestinationWithSuggestedFilename = [](WKContextRef, WKDownloadRef download, WKStringRef filename, bool* allowOverwrite, const void* clientInfo) -> WKStringRef {
@@ -247,7 +250,7 @@ static void InitializeSharedContext(HWND hWnd)
         std::string utf8Name(maxSize, '\0');
         size_t actualSize = WKStringGetUTF8CString(filename, utf8Name.data(), maxSize);
         if (actualSize > 0) {
-            utf8Name.resize(actualSize - 1); // -1 to remove null terminator
+            utf8Name.resize(actualSize - 1);
         }
         std::wstring wSuggestedName = UTF8ToWide(utf8Name);
         
@@ -257,19 +260,15 @@ static void InitializeSharedContext(HWND hWnd)
             // Ask user where to save
             destinationPath = AskSaveLocation(parent, wSuggestedName.c_str());
             if (destinationPath.empty()) {
-                // User cancelled
                 return nullptr;
             }
         } else {
             // Use predefined location
             std::wstring downloadFolder = GetDownloadPath();
             
-            // Create download folder if it doesn't exist
             if (!CreateDirectoryW(downloadFolder.c_str(), nullptr)) {
-                // Check if the directory already exists
                 DWORD error = GetLastError();
                 if (error != ERROR_ALREADY_EXISTS) {
-                    // Failed to create directory and it doesn't exist
                     return nullptr;
                 }
             }
@@ -278,23 +277,8 @@ static void InitializeSharedContext(HWND hWnd)
         }
         
         *allowOverwrite = true;
-        
-        // Convert back to UTF8 for WebKit
         std::string utf8Path = WideToUTF8(destinationPath);
-        
         return WKStringCreateWithUTF8CString(utf8Path.c_str());
-    };
-    
-    downloadClient.didStart = [](WKContextRef, WKDownloadRef download, const void*) {
-        // Download started - could show notification or progress UI
-    };
-    
-    downloadClient.didFinish = [](WKContextRef, WKDownloadRef download, const void*) {
-        // Download completed - could show notification
-    };
-    
-    downloadClient.didFail = [](WKContextRef, WKDownloadRef download, WKErrorRef error, const void*) {
-        // Download failed - could show error message
     };
     
     WKContextSetDownloadClient(gSharedContext, &downloadClient.base);
@@ -334,7 +318,14 @@ static void AddTab(HWND hWnd, const char* url)
         UpdateUrlBarFromPage(p);
         UpdateTabFromPage(p);
     };
+    
     WKPageSetPageNavigationClient(page, &navClient.base);
+
+    static WKPageUIClientV0 uiClient;
+    uiClient.base.version = 0;
+    uiClient.base.clientInfo = hWnd;
+    
+    WKPageSetPageUIClient(page, &uiClient.base);
     
     HWND child = WKViewGetWindow(view);
     ShowWindow(child, SW_HIDE);
@@ -396,29 +387,40 @@ static void CloseTab(HWND hWnd, int index)
 static LRESULT CALLBACK UrlBarProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam,
                                    UINT_PTR, DWORD_PTR)
 {
-    if (msg == WM_KEYDOWN && wParam == VK_RETURN) {
-        wchar_t wbuf[2048];
-        GetWindowTextW(hwnd, wbuf, 2048);
-        char buf[2048];
-        WideCharToMultiByte(CP_UTF8, 0, wbuf, -1, buf, sizeof(buf), nullptr, nullptr);
-        std::string input = buf;
-        std::string display = input;
-        std::string url;
-        if (input.find(' ') != std::string::npos) {
-            for (char& c : input)
-                if (c == ' ')
-                    c = '+';
-            url = "https://www.google.com/search?q=" + input;
-        } else {
-            if (input.rfind("https://", 0) == 0)
-                input.erase(0, 8);
-            url = "https://" + input;
-            display = input;
+    if (msg == WM_KEYDOWN) {
+        if (wParam == VK_RETURN) {
+            wchar_t wbuf[2048];
+            GetWindowTextW(hwnd, wbuf, 2048);
+            char buf[2048];
+            WideCharToMultiByte(CP_UTF8, 0, wbuf, -1, buf, sizeof(buf), nullptr, nullptr);
+            std::string input = buf;
+            std::string display = input;
+            std::string url;
+            if (input.find(' ') != std::string::npos) {
+                for (char& c : input)
+                    if (c == ' ')
+                        c = '+';
+                url = "https://www.google.com/search?q=" + input;
+            } else {
+                if (input.rfind("https://", 0) == 0)
+                    input.erase(0, 8);
+                url = "https://" + input;
+                display = input;
+            }
+            std::wstring wdisp(display.begin(), display.end());
+            SetWindowTextW(gUrlBar, wdisp.c_str());
+            NavigateCurrent(url.c_str());
+            return 0;
         }
-        std::wstring wdisp(display.begin(), display.end());
-        SetWindowTextW(gUrlBar, wdisp.c_str());
-        NavigateCurrent(url.c_str());
-        return 0;
+        else if (wParam == 'A' && GetKeyState(VK_CONTROL) < 0) {
+            SendMessageW(hwnd, EM_SETSEL, 0, -1);
+            return 0;
+        }
+    }
+    else if (msg == WM_CHAR) {
+        if (wParam < 32 && wParam != VK_BACK && wParam != VK_TAB) {
+            return 0;
+        }
     }
     return DefSubclassProc(hwnd, msg, wParam, lParam);
 }

@@ -50,7 +50,7 @@ void SetDownloadPath(const std::wstring& path) {
     if (RegCreateKeyExW(HKEY_CURRENT_USER, REG_KEY, 0, nullptr, 0,
                        KEY_WRITE, nullptr, &hKey, &disposition) == ERROR_SUCCESS) {
         RegSetValueExW(hKey, REG_DOWNLOAD_PATH, 0, REG_SZ,
-                      (const BYTE*)path.c_str(), (path.length() + 1) * sizeof(wchar_t));
+                      (const BYTE*)path.c_str(), static_cast<DWORD>((path.length() + 1) * sizeof(wchar_t)));
         RegCloseKey(hKey);
     }
 }
@@ -124,11 +124,6 @@ static LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPAR
         HWND cacheBtn = CreateWindowW(L"BUTTON", L"Clear Cache", WS_CHILD | WS_VISIBLE, 130, yPos, 110, 24, hwnd, (HMENU)2002, nullptr, nullptr);
         SendMessageW(cacheBtn, WM_SETFONT, (WPARAM)font, TRUE);
         yPos += 34;
-        
-        // Download settings section
-        HWND dlLabel = CreateWindowW(L"STATIC", L"Download Settings:", WS_CHILD | WS_VISIBLE, 10, yPos, 250, 20, hwnd, nullptr, nullptr, nullptr);
-        SendMessageW(dlLabel, WM_SETFONT, (WPARAM)font, TRUE);
-        yPos += 25;
         
         // Download path label
         HWND pathLabel = CreateWindowW(L"STATIC", L"Download Location:", WS_CHILD | WS_VISIBLE, 10, yPos, 120, 20, hwnd, nullptr, nullptr, nullptr);

@@ -33,10 +33,12 @@ static bool IsWindowsVersionSupported() {
     return true;
 }
 
-int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, PWSTR, int nCmdShow) {
+int WINAPI wWinMain(_In_ HINSTANCE hInst, _In_opt_ HINSTANCE, _In_ PWSTR, _In_ int nCmdShow) {
     if (!IsWindowsVersionSupported()) {
         MessageBoxW(nullptr,
-            L"A fatal occured when attaching WebKit.\n"
+            L"A fatal error occurred when attaching WebKit.\n"
+            L"The application will now close",
+            L"Cryptidium Browser - Error",
             MB_OK | MB_ICONERROR);
         return 1;
     }
