@@ -1,7 +1,7 @@
 name: Build Cryptidium Browser
 
-# Manual only. Builds WebKit (WinCairo) from source, then builds Cryptidium against it.
-# Expect a long run (WebKit alone is typically 1-3 hours on a hosted runner).
+# Manual only. Runs on a self-hosted Windows runner (needs VS 2022 C++, Git, Perl,
+# Python, Ruby, CMake, Ninja, gperf). WebKit is kept between runs and built incrementally.
 on:
   workflow_dispatch:
     inputs:
@@ -18,9 +18,12 @@ on:
 permissions:
   contents: read
 
+env:
+  WEBKIT_DIR: C:\cryptidium-ci\WebKit
+
 jobs:
   build:
-    runs-on: windows-2022
+    runs-on: [self-hosted, windows, x64]
     timeout-minutes: 360
 
     steps:
@@ -40,45 +43,33 @@ jobs:
         echo "sha=$sha" >> $env:GITHUB_OUTPUT
         echo "WebKit commit: $sha"
 
-    - name: Restore cached WebKit build
-      id: cache
-      uses: actions/cache@v4
-      with:
-        path: cryptidium/WebKit
-        key: webkit-wincairo-${{ inputs.configuration }}-${{ steps.webkit.outputs.sha }}
-
-    - name: Clone WebKit
-      if: steps.cache.outputs.cache-hit != 'true'
+    - name: Sync WebKit
       shell: pwsh
       run: |
-        git init D:\WebKit
-        git -C D:\WebKit fetch --depth 1 https://github.com/WebKit/WebKit.git "${{ steps.webkit.outputs.sha }}"
-        git -C D:\WebKit checkout FETCH_HEAD
-        git -C D:\WebKit log -1 --format="WebKit %H %s"
-
-    - name: Install build tools
-      if: steps.cache.outputs.cache-hit != 'true'
-      shell: pwsh
-      run: choco install gperf ninja --no-progress -y
+        if (-not (Test-Path "$env:WEBKIT_DIR\.git")) {
+          New-Item -ItemType Directory -Force $env:WEBKIT_DIR | Out-Null
+          git init $env:WEBKIT_DIR
+        }
+        git -C $env:WEBKIT_DIR fetch --depth 1 https://github.com/WebKit/WebKit.git "${{ steps.webkit.outputs.sha }}"
+        git -C $env:WEBKIT_DIR checkout -f FETCH_HEAD
+        git -C $env:WEBKIT_DIR log -1 --format="WebKit %H %s"
 
     - name: Setup MSVC environment
-      if: steps.cache.outputs.cache-hit != 'true'
       uses: ilammy/msvc-dev-cmd@v1
       with:
         arch: x64
 
     - name: Build WebKit (WinCairo)
-      if: steps.cache.outputs.cache-hit != 'true'
       shell: cmd
-      working-directory: D:\WebKit
+      working-directory: ${{ env.WEBKIT_DIR }}
       run: perl Tools\Scripts\build-webkit --${{ inputs.configuration == 'Debug' && 'debug' || 'release' }} --wincairo --ninja
 
     - name: Stage WebKit for Cryptidium
-      if: steps.cache.outputs.cache-hit != 'true'
       shell: pwsh
       run: |
-        $out = "D:\WebKit\WebKitBuild"
+        $out = "$env:WEBKIT_DIR\WebKitBuild"
         $dest = "$env:GITHUB_WORKSPACE\cryptidium\WebKit"
+        Remove-Item $dest -Recurse -Force -ErrorAction SilentlyContinue
         New-Item -ItemType Directory -Force "$dest\bin", "$dest\lib", "$dest\WebKit\Headers" | Out-Null
 
         $lib = Get-ChildItem $out -Recurse -Filter WebKit2.lib | Select-Object -First 1
@@ -90,7 +81,6 @@ jobs:
         Copy-Item "$($dll.DirectoryName)\*" "$dest\bin" -Recurse -Force
         # Code includes <WebKit/WebKit2_C.h>, so the include root is the parent of the WebKit dir
         Copy-Item "$($hdr.Directory.Parent.FullName)\*" "$dest\WebKit\Headers" -Recurse -Force
-        Get-ChildItem $dest -Recurse -Depth 1 | Select-Object -First 40 FullName
 
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v2
