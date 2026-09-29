@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "buildinfo.h"
 #include <windows.h>
 #include <urlmon.h>
