@@ -1,8 +1,10 @@
-#include <windows.h>
+#include "pch.h"
 #include <winternl.h>
 #include <shellapi.h>
 #include <string>
 #include "gui.h"
+#include "buildinfo.h"
+#include "App.xaml.h"
 
 static bool IsWindowsVersionSupported() {
     typedef NTSTATUS(WINAPI* RtlGetVersionPtr)(PRTL_OSVERSIONINFOW);
@@ -71,5 +73,13 @@ int WINAPI wWinMain(_In_ HINSTANCE hInst, _In_opt_ HINSTANCE, _In_ PWSTR, _In_ i
     }
     if (argv)
         LocalFree(argv);
-    return RunBrowser(hInst, nCmdShow, initial);
+    SetStartupUrl(initial);
+
+    BuildInfo::ProcessUpdates();
+
+    winrt::init_apartment(winrt::apartment_type::single_threaded);
+    winrt::Microsoft::UI::Xaml::Application::Start([](auto&&) {
+        winrt::make<winrt::Cryptidium::implementation::App>();
+    });
+    return 0;
 }

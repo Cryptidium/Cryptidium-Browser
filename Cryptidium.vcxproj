@@ -15,6 +15,16 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>Cryptidium</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformMinVersion>10.0.22621.0</WindowsTargetPlatformMinVersion>
+    <CppWinRTOptimized>true</CppWinRTOptimized>
+    <CppWinRTRootNamespaceAutoMerge>true</CppWinRTRootNamespaceAutoMerge>
+    <MinimalCoreWin>true</MinimalCoreWin>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <AppContainerApplication>false</AppContainerApplication>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <EnableMsixTooling>true</EnableMsixTooling>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -31,7 +41,9 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(ProjectDir)packages\Microsoft.Windows.CppWinRT.2.0.240405.15\build\native\Microsoft.Windows.CppWinRT.props" Condition="Exists('$(ProjectDir)packages\Microsoft.Windows.CppWinRT.2.0.240405.15\build\native\Microsoft.Windows.CppWinRT.props')" />
+  </ImportGroup>
   <ImportGroup Label="Shared" />
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -53,12 +65,16 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir)\WebKit\WebKit\Headers</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PreprocessorDefinitions>DISABLE_XAML_GENERATED_MAIN;WIN32_LEAN_AND_MEAN;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>%(AdditionalOptions) /bigobj</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)\WebKit\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);WebKit2.lib;WebCore.lib;JavaScriptCore.lib;Comctl32.lib;Urlmon.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);WebKit2.lib;WebCore.lib;JavaScriptCore.lib;Comctl32.lib;Urlmon.lib;Shell32.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -69,6 +85,10 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PreprocessorDefinitions>DISABLE_XAML_GENERATED_MAIN;WIN32_LEAN_AND_MEAN;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>%(AdditionalOptions) /bigobj</AdditionalOptions>
       <AdditionalIncludeDirectories>$(ProjectDir)\WebKit\WebKit\Headers</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -76,24 +96,46 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);WebKit2.lib;WebCore.lib;JavaScriptCore.lib;Comctl32.lib;Urlmon.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);WebKit2.lib;WebCore.lib;JavaScriptCore.lib;Comctl32.lib;Urlmon.lib;Shell32.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)\WebKit\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="pch.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="Cryptidium.cpp" />
     <ClCompile Include="buildinfo.cpp" />
-    <ClCompile Include="gui.cpp" />
     <ClCompile Include="settings.cpp" />
+    <ClCompile Include="App.xaml.cpp"><DependentUpon>App.xaml</DependentUpon></ClCompile>
+    <ClCompile Include="MainWindow.xaml.cpp"><DependentUpon>MainWindow.xaml</DependentUpon></ClCompile>
+    <ClCompile Include="SettingsWindow.xaml.cpp"><DependentUpon>SettingsWindow.xaml</DependentUpon></ClCompile>
+    <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
+    <ClInclude Include="pch.h" />
     <ClInclude Include="buildinfo.h" />
     <ClInclude Include="gui.h" />
     <ClInclude Include="settings.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="App.xaml.h"><DependentUpon>App.xaml</DependentUpon></ClInclude>
+    <ClInclude Include="MainWindow.xaml.h"><DependentUpon>MainWindow.xaml</DependentUpon></ClInclude>
+    <ClInclude Include="SettingsWindow.xaml.h"><DependentUpon>SettingsWindow.xaml</DependentUpon></ClInclude>
+    <ApplicationDefinition Include="App.xaml" />
+    <Page Include="MainWindow.xaml" />
+    <Page Include="SettingsWindow.xaml" />
+    <Midl Include="App.idl"><SubType>Code</SubType><DependentUpon>App.xaml</DependentUpon></Midl>
+    <Midl Include="MainWindow.idl"><SubType>Code</SubType><DependentUpon>MainWindow.xaml</DependentUpon></Midl>
+    <Midl Include="SettingsWindow.idl"><SubType>Code</SubType><DependentUpon>SettingsWindow.xaml</DependentUpon></Midl>
     <None Include="assets\app.ico" />
+    <None Include="packages.config" />
     <ResourceCompile Include="resources.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(ProjectDir)packages\Microsoft.Windows.CppWinRT.2.0.240405.15\build\native\Microsoft.Windows.CppWinRT.targets" Condition="Exists('$(ProjectDir)packages\Microsoft.Windows.CppWinRT.2.0.240405.15\build\native\Microsoft.Windows.CppWinRT.targets')" />
+    <Import Project="$(ProjectDir)packages\Microsoft.Windows.SDK.BuildTools.10.0.26100.1742\build\Microsoft.Windows.SDK.BuildTools.targets" Condition="Exists('$(ProjectDir)packages\Microsoft.Windows.SDK.BuildTools.10.0.26100.1742\build\Microsoft.Windows.SDK.BuildTools.targets')" />
+    <Import Project="$(ProjectDir)packages\Microsoft.Web.WebView2.1.0.2903.40\build\native\Microsoft.Web.WebView2.targets" Condition="Exists('$(ProjectDir)packages\Microsoft.Web.WebView2.1.0.2903.40\build\native\Microsoft.Web.WebView2.targets')" />
+    <Import Project="$(ProjectDir)packages\Microsoft.WindowsAppSDK.1.6.250108002\build\native\Microsoft.WindowsAppSDK.targets" Condition="Exists('$(ProjectDir)packages\Microsoft.WindowsAppSDK.1.6.250108002\build\native\Microsoft.WindowsAppSDK.targets')" />
+  </ImportGroup>
   <Target Name="AfterBuild">
     <ItemGroup>
       <WebKitBinFiles Include="$(ProjectDir)\WebKit\bin\*.*" />

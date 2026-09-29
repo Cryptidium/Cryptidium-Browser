@@ -8,6 +8,7 @@ A modern WebKit based web browser for Windows 11
 ```bash
 git clone https://github.com/Cryptidium/WebKit.git
 ```
-5. Open the solution in Visual Studio 2022
-6. Open the Build drop down on the top of the screen
-7. Press Build Solution
+5. Restore NuGet packages (`nuget restore Cryptidium.sln` or let Visual Studio do it). The UI uses WinUI 3 (Windows App SDK 1.6, C++/WinRT)
+6. Open the solution in Visual Studio 2022
+7. Open the Build drop down on the top of the screen
+8. Press Build Solution

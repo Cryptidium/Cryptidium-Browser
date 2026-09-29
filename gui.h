@@ -1,7 +1,6 @@
 #pragma once
-#include <windows.h>
+#include <string>
 #include <WebKit/WebKit2_C.h>
 
-int RunBrowser(HINSTANCE hInstance, int nCmdShow, const char* initialUrl = nullptr);
 WKContextRef GetCurrentContext();
-HFONT GetUIFont();
+void SetStartupUrl(const char* url);
