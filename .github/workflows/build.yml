@@ -1,0 +1,116 @@
+name: Build Cryptidium Browser
+
+# Manual only. Builds WebKit (WinCairo) from source, then builds Cryptidium against it.
+# Expect a long run (WebKit alone is typically 1-3 hours on a hosted runner).
+on:
+  workflow_dispatch:
+    inputs:
+      configuration:
+        description: Build configuration
+        type: choice
+        options: [Release, Debug]
+        default: Release
+      webkit_ref:
+        description: WebKit branch, tag or commit to build
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 360
+
+    steps:
+    - name: Checkout Cryptidium
+      uses: actions/checkout@v4
+      with:
+        path: cryptidium
+
+    - name: Resolve WebKit commit
+      id: webkit
+      shell: pwsh
+      run: |
+        $ref = "${{ inputs.webkit_ref }}"
+        $sha = (git ls-remote https://github.com/WebKit/WebKit.git $ref | Select-Object -First 1) -split "\s+" | Select-Object -First 1
+        if (-not $sha) { $sha = $ref }
+        if ($sha -notmatch '^[0-9a-f]{7,40}$') { throw "Could not resolve WebKit ref '$ref'" }
+        echo "sha=$sha" >> $env:GITHUB_OUTPUT
+        echo "WebKit commit: $sha"
+
+    - name: Restore cached WebKit build
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: cryptidium/WebKit
+        key: webkit-wincairo-${{ inputs.configuration }}-${{ steps.webkit.outputs.sha }}
+
+    - name: Clone WebKit
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: pwsh
+      run: |
+        git init D:\WebKit
+        git -C D:\WebKit fetch --depth 1 https://github.com/WebKit/WebKit.git "${{ steps.webkit.outputs.sha }}"
+        git -C D:\WebKit checkout FETCH_HEAD
+        git -C D:\WebKit log -1 --format="WebKit %H %s"
+
+    - name: Install build tools
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: pwsh
+      run: choco install gperf ninja --no-progress -y
+
+    - name: Setup MSVC environment
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+
+    - name: Build WebKit (WinCairo)
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: cmd
+      working-directory: D:\WebKit
+      run: perl Tools\Scripts\build-webkit --${{ inputs.configuration == 'Debug' && 'debug' || 'release' }} --wincairo --ninja
+
+    - name: Stage WebKit for Cryptidium
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: pwsh
+      run: |
+        $out = "D:\WebKit\WebKitBuild"
+        $dest = "$env:GITHUB_WORKSPACE\cryptidium\WebKit"
+        New-Item -ItemType Directory -Force "$dest\bin", "$dest\lib", "$dest\WebKit\Headers" | Out-Null
+
+        $lib = Get-ChildItem $out -Recurse -Filter WebKit2.lib | Select-Object -First 1
+        $dll = Get-ChildItem $out -Recurse -Filter WebKit2.dll | Select-Object -First 1
+        $hdr = Get-ChildItem $out -Recurse -Filter WebKit2_C.h | Select-Object -First 1
+        if (-not ($lib -and $dll -and $hdr)) { throw "Could not find WebKit2 lib/dll/headers under $out" }
+
+        Copy-Item "$($lib.DirectoryName)\*" "$dest\lib" -Recurse -Force
+        Copy-Item "$($dll.DirectoryName)\*" "$dest\bin" -Recurse -Force
+        # Code includes <WebKit/WebKit2_C.h>, so the include root is the parent of the WebKit dir
+        Copy-Item "$($hdr.Directory.Parent.FullName)\*" "$dest\WebKit\Headers" -Recurse -Force
+        Get-ChildItem $dest -Recurse -Depth 1 | Select-Object -First 40 FullName
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v2
+
+    - name: Restore NuGet packages
+      shell: pwsh
+      working-directory: cryptidium
+      run: nuget restore Cryptidium.sln
+
+    - name: Build Cryptidium
+      shell: pwsh
+      working-directory: cryptidium
+      run: msbuild Cryptidium.sln /p:Configuration=${{ inputs.configuration }} /p:Platform=x64
+
+    - name: Upload build
+      uses: actions/upload-artifact@v4
+      with:
+        name: Cryptidium-Browser-${{ inputs.configuration }}
+        path: cryptidium/x64/${{ inputs.configuration }}/
+        if-no-files-found: error
