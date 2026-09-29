@@ -29,32 +29,52 @@ jobs:
       with:
         path: cryptidium
 
-    - name: Clone WebKit
+    - name: Resolve WebKit commit
+      id: webkit
       shell: pwsh
       run: |
-        git clone --depth 1 --branch "${{ inputs.webkit_ref }}" https://github.com/WebKit/WebKit.git D:\WebKit
-        if ($LASTEXITCODE -ne 0) {
-          git init D:\WebKit
-          git -C D:\WebKit fetch --depth 1 https://github.com/WebKit/WebKit.git "${{ inputs.webkit_ref }}"
-          git -C D:\WebKit checkout FETCH_HEAD
-        }
+        $ref = "${{ inputs.webkit_ref }}"
+        $sha = (git ls-remote https://github.com/WebKit/WebKit.git $ref | Select-Object -First 1) -split "\s+" | Select-Object -First 1
+        if (-not $sha) { $sha = $ref }
+        if ($sha -notmatch '^[0-9a-f]{7,40}$') { throw "Could not resolve WebKit ref '$ref'" }
+        echo "sha=$sha" >> $env:GITHUB_OUTPUT
+        echo "WebKit commit: $sha"
+
+    - name: Restore cached WebKit build
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: cryptidium/WebKit
+        key: webkit-wincairo-${{ inputs.configuration }}-${{ steps.webkit.outputs.sha }}
+
+    - name: Clone WebKit
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: pwsh
+      run: |
+        git init D:\WebKit
+        git -C D:\WebKit fetch --depth 1 https://github.com/WebKit/WebKit.git "${{ steps.webkit.outputs.sha }}"
+        git -C D:\WebKit checkout FETCH_HEAD
         git -C D:\WebKit log -1 --format="WebKit %H %s"
 
     - name: Install build tools
+      if: steps.cache.outputs.cache-hit != 'true'
       shell: pwsh
       run: choco install gperf ninja --no-progress -y
 
     - name: Setup MSVC environment
+      if: steps.cache.outputs.cache-hit != 'true'
       uses: ilammy/msvc-dev-cmd@v1
       with:
         arch: x64
 
     - name: Build WebKit (WinCairo)
+      if: steps.cache.outputs.cache-hit != 'true'
       shell: cmd
       working-directory: D:\WebKit
       run: perl Tools\Scripts\build-webkit --${{ inputs.configuration == 'Debug' && 'debug' || 'release' }} --wincairo --ninja
 
     - name: Stage WebKit for Cryptidium
+      if: steps.cache.outputs.cache-hit != 'true'
       shell: pwsh
       run: |
         $out = "D:\WebKit\WebKitBuild"
