@@ -1,0 +1,43 @@
+name: Build Cryptidium Browser
+
+on:
+  workflow_dispatch:
+    inputs:
+      configuration:
+        description: Build configuration
+        type: choice
+        options: [Release, Debug]
+        default: Release
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v2
+
+    - name: Clone WebKit
+      run: git clone https://github.com/Cryptidium/WebKit.git
+
+    - name: Restore NuGet packages
+      run: nuget restore Cryptidium.sln
+
+    - name: Build
+      run: msbuild Cryptidium.sln /p:Configuration=${{ inputs.configuration }} /p:Platform=x64
+
+    - name: Upload build
+      uses: actions/upload-artifact@v4
+      with:
+        name: Cryptidium-Browser-${{ inputs.configuration }}
+        path: x64/${{ inputs.configuration }}/
+        if-no-files-found: error
